@@ -1,0 +1,82 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0e1621;
+  color: #e8eaed;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+code {
+  font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(43, 82, 120, 0.3);
+  border-top-color: #2b5278;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e2832;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3c4043;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5f6368;
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(43, 82, 120, 0.3);
+  color: #e8eaed;
+}
+
+/* Focus outline */
+:focus-visible {
+  outline: 2px solid #2b5278;
+  outline-offset: 2px;
+}
+
+/* Disable text selection on UI elements */
+button,
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}

@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai_chat_postgres_dev
+    environment:
+      POSTGRES_USER: ${DB_USER:-ai_chat_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password}
+      POSTGRES_DB: ${DB_NAME:-ai_chat_db}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./backend/internal/database/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - ai_chat_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ai_chat_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai_chat_redis_dev
+    command: redis-server
+    volumes:
+      - redis_dev_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - ai_chat_dev_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: ai_chat_backend_dev
+    environment:
+      - ENV=development
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - FRONTEND_URL=http://localhost:3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-ai_chat_user}
+      - DB_PASSWORD=${DB_PASSWORD:-dev_password}
+      - DB_NAME=${DB_NAME:-ai_chat_db}
+      - DB_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_key_change_in_production}
+      - OAUTH2_TWITTER_CLIENT_ID=${OAUTH2_TWITTER_CLIENT_ID}
+      - OAUTH2_TWITTER_CLIENT_SECRET=${OAUTH2_TWITTER_CLIENT_SECRET}
+      - OAUTH2_TWITTER_REDIRECT_URL=http://localhost:8080/api/v1/auth/oauth2/callback
+      - GEOIP_BLOCK_CHINA=false
+      - RATE_LIMIT_DEFAULT_PER_MINUTE=100
+      - SUPER_ADMIN_USERNAME=admin
+      - SUPER_ADMIN_PASSWORD=admin123
+      - SUPER_ADMIN_EMAIL=admin@example.com
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai_chat_dev_network
+    volumes:
+      - ./backend:/app
+      - go_mod_cache:/go/pkg/mod
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: ai_chat_frontend_dev
+    environment:
+      - VITE_API_URL=http://localhost:8080/api/v1
+    ports:
+      - "3000:3000"
+    networks:
+      - ai_chat_dev_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  go_mod_cache:
+
+networks:
+  ai_chat_dev_network:
+    driver: bridge

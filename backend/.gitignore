@@ -1,0 +1,16 @@
+# Backend .gitignore
+tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+.air.toml.local
+.env
+.env.local
+*.log
+data/GeoLite2-Country.mmdb
+web/dist/

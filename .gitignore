@@ -1,0 +1,25 @@
+# Root .gitignore
+bin/
+*.log
+
+# Docker volumes
+postgres_data/
+redis_data/
+geoip_data/
+
+# Environment files
+.env
+.env.production
+.env.development
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.md
+!README.md
