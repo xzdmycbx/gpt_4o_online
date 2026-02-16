@@ -60,7 +60,7 @@ func (l *Limiter) checkLimit(ctx context.Context, key string, limit int) (bool, 
 	// Add current request
 	pipe.ZAdd(ctx, key, redis.Z{
 		Score:  float64(now.UnixNano()),
-		Member: now.UnixNano(),
+		Member: fmt.Sprintf("%d", now.UnixNano()),
 	})
 
 	// Set expiration

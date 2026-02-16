@@ -309,7 +309,7 @@ func (s *ChatService) GetStreamingResponse(ctx context.Context, userID, conversa
 		return nil, nil, fmt.Errorf("failed to get model: %w", err)
 	}
 
-	aiRequest := &model.ChatCompletionRequest{
+	_ = &model.ChatCompletionRequest{
 		Model:    aiModel.ModelIdentifier,
 		Messages: chatMessages,
 		Stream:   true,
