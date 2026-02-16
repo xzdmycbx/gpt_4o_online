@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 
@@ -29,11 +30,12 @@ func CheckPasswordHash(password, hash string) bool {
 
 // Encrypt encrypts plaintext using AES-256-GCM
 func Encrypt(plaintext, key string) (string, error) {
-	if len(key) != 32 {
-		return "", fmt.Errorf("encryption key must be 32 bytes for AES-256")
+	keyBytes, err := resolveAESKey(key)
+	if err != nil {
+		return "", err
 	}
 
-	block, err := aes.NewCipher([]byte(key))
+	block, err := aes.NewCipher(keyBytes)
 	if err != nil {
 		return "", fmt.Errorf("failed to create cipher: %w", err)
 	}
@@ -54,8 +56,9 @@ func Encrypt(plaintext, key string) (string, error) {
 
 // Decrypt decrypts ciphertext using AES-256-GCM
 func Decrypt(ciphertext, key string) (string, error) {
-	if len(key) != 32 {
-		return "", fmt.Errorf("encryption key must be 32 bytes for AES-256")
+	keyBytes, err := resolveAESKey(key)
+	if err != nil {
+		return "", err
 	}
 
 	data, err := base64.StdEncoding.DecodeString(ciphertext)
@@ -63,7 +66,7 @@ func Decrypt(ciphertext, key string) (string, error) {
 		return "", fmt.Errorf("failed to decode ciphertext: %w", err)
 	}
 
-	block, err := aes.NewCipher([]byte(key))
+	block, err := aes.NewCipher(keyBytes)
 	if err != nil {
 		return "", fmt.Errorf("failed to create cipher: %w", err)
 	}
@@ -85,6 +88,24 @@ func Decrypt(ciphertext, key string) (string, error) {
 	}
 
 	return string(plaintext), nil
+}
+
+// resolveAESKey supports either:
+// 1) 32-char raw key (legacy format)
+// 2) 64-char hex key (decoded to 32 bytes)
+func resolveAESKey(key string) ([]byte, error) {
+	if len(key) == 32 {
+		return []byte(key), nil
+	}
+
+	if len(key) == 64 {
+		decoded, err := hex.DecodeString(key)
+		if err == nil && len(decoded) == 32 {
+			return decoded, nil
+		}
+	}
+
+	return nil, fmt.Errorf("encryption key must be 32 chars (raw) or 64 chars (hex) for AES-256")
 }
 
 // GenerateRandomToken generates a random token for password reset, etc.

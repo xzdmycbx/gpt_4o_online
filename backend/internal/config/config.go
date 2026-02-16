@@ -1,11 +1,16 @@
 package config
 
 import (
+	"context"
+	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ai-chat/backend/internal/pkg/crypto"
 )
 
 // Config holds all application configuration
@@ -158,6 +163,7 @@ func Load() (*Config, error) {
 			Secret:     getEnv("JWT_SECRET", "change_this_secret_key"),
 			Expiration: time.Duration(jwtExpirationHours) * time.Hour,
 		},
+		// OAuth2、Email、AI 配置将从数据库加载，这里使用环境变量作为初始值
 		OAuth2: OAuth2Config{
 			TwitterClientID:     getEnv("OAUTH2_TWITTER_CLIENT_ID", ""),
 			TwitterClientSecret: getEnv("OAUTH2_TWITTER_CLIENT_SECRET", ""),
@@ -210,8 +216,8 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if len(c.Encryption.Key) != 32 && c.Encryption.Key != "" {
-		return fmt.Errorf("ENCRYPTION_KEY must be exactly 32 bytes for AES-256")
+	if c.Encryption.Key != "" && !isValidEncryptionKey(c.Encryption.Key) {
+		return fmt.Errorf("ENCRYPTION_KEY must be 32 chars (raw) or 64 chars (hex) for AES-256")
 	}
 
 	if c.Database.Password == "" {
@@ -219,6 +225,19 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+func isValidEncryptionKey(key string) bool {
+	if len(key) == 32 {
+		return true
+	}
+
+	if len(key) == 64 {
+		_, err := hex.DecodeString(key)
+		return err == nil
+	}
+
+	return false
 }
 
 // GetDSN returns the PostgreSQL connection string
@@ -265,4 +284,88 @@ func parseTrustedProxies(value string) []string {
 		}
 	}
 	return proxies
+}
+
+// LoadDynamicConfig loads dynamic configuration from database
+func (c *Config) LoadDynamicConfig(db *sql.DB) error {
+	ctx := context.Background()
+
+	// 查询所有系统设置
+	query := `SELECT setting_key, setting_value FROM system_settings`
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to query system settings: %w", err)
+	}
+	defer rows.Close()
+
+	settings := make(map[string]string)
+	for rows.Next() {
+		var key, value string
+		if err := rows.Scan(&key, &value); err != nil {
+			continue
+		}
+		settings[key] = value
+	}
+
+	// 加载 OAuth2 配置
+	if val, ok := settings["oauth2_twitter_client_id"]; ok && val != "" {
+		c.OAuth2.TwitterClientID = val
+	}
+	if val, ok := settings["oauth2_twitter_client_secret"]; ok && val != "" {
+		// 解密
+		if decrypted, err := crypto.Decrypt(val, c.Encryption.Key); err == nil {
+			c.OAuth2.TwitterClientSecret = decrypted
+		}
+	}
+	if val, ok := settings["oauth2_twitter_redirect_url"]; ok && val != "" {
+		c.OAuth2.TwitterRedirectURL = val
+	}
+
+	// 加载邮件配置
+	if val, ok := settings["email_provider"]; ok && val != "" {
+		c.Email.Provider = val
+	}
+	if val, ok := settings["email_smtp_host"]; ok && val != "" {
+		c.Email.SMTPHost = val
+	}
+	if val, ok := settings["email_smtp_port"]; ok && val != "" {
+		if port, err := strconv.Atoi(val); err == nil {
+			c.Email.SMTPPort = port
+		}
+	}
+	if val, ok := settings["email_smtp_user"]; ok && val != "" {
+		c.Email.SMTPUser = val
+	}
+	if val, ok := settings["email_smtp_password"]; ok && val != "" {
+		// 解密
+		if decrypted, err := crypto.Decrypt(val, c.Encryption.Key); err == nil {
+			c.Email.SMTPPassword = decrypted
+		}
+	}
+	if val, ok := settings["email_from"]; ok && val != "" {
+		c.Email.EmailFrom = val
+	}
+	if val, ok := settings["email_resend_api_key"]; ok && val != "" {
+		// 解密
+		if decrypted, err := crypto.Decrypt(val, c.Encryption.Key); err == nil {
+			c.Email.ResendAPIKey = decrypted
+		}
+	}
+
+	// 加载 AI 配置
+	if val, ok := settings["ai_default_memory_model"]; ok && val != "" {
+		c.AI.DefaultMemoryModel = val
+	}
+	if val, ok := settings["ai_memory_extraction_enabled"]; ok {
+		c.AI.MemoryExtractionEnabled = (val == "true")
+	}
+
+	// 加载速率限制配置
+	if val, ok := settings["rate_limit_default_per_minute"]; ok && val != "" {
+		if limit, err := strconv.Atoi(val); err == nil {
+			c.RateLimit.DefaultPerMinute = limit
+		}
+	}
+
+	return nil
 }

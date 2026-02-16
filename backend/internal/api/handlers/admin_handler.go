@@ -436,6 +436,9 @@ func (h *AdminHandler) GetSystemSettings(c *gin.Context) {
 		return
 	}
 
+	// 掩码敏感信息
+	settings.MaskSensitiveData()
+
 	c.JSON(http.StatusOK, settings)
 }
 
@@ -453,6 +456,18 @@ func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
 		return
 	}
 
+	// 验证邮件配置
+	if err := h.systemSettingsService.ValidateEmailConfig(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 验证 OAuth2 配置
+	if err := h.systemSettingsService.ValidateOAuth2Config(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	err := h.systemSettingsService.UpdateSettings(c.Request.Context(), &dto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
@@ -460,4 +475,24 @@ func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
+}
+
+// TestEmailConfiguration 测试邮件配置
+func (h *AdminHandler) TestEmailConfiguration(c *gin.Context) {
+	var req struct {
+		TestEmail string `json:"test_email" binding:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email address"})
+		return
+	}
+
+	// 测试邮件发送
+	if err := h.systemSettingsService.TestEmailConfiguration(c.Request.Context(), req.TestEmail); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to send test email: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Test email sent successfully"})
 }

@@ -1,6 +1,25 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const PUBLIC_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password', '/oauth2/callback']);
+let loginRedirectInProgress = false;
+
+const shouldRedirectToLogin = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/';
+  return !PUBLIC_PATHS.has(normalizedPath);
+};
+
+const redirectToLoginOnce = () => {
+  if (!shouldRedirectToLogin() || loginRedirectInProgress) {
+    return;
+  }
+
+  loginRedirectInProgress = true;
+  window.location.assign('/login');
+};
 
 class APIClient {
   private client: AxiosInstance;
@@ -69,7 +88,7 @@ class APIClient {
               return await this.client.request(originalRequest);
             } catch (retryError) {
               // If retry also fails, redirect to login
-              window.location.href = '/login';
+              redirectToLoginOnce();
               return Promise.reject(retryError);
             }
           }
@@ -77,7 +96,7 @@ class APIClient {
 
         if (error.response?.status === 401) {
           // No token or retry failed, redirect to login
-          window.location.href = '/login';
+          redirectToLoginOnce();
         }
 
         return Promise.reject(error);

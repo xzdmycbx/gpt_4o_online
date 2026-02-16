@@ -52,6 +52,14 @@ func main() {
 	defer db.Close()
 	log.Println("Database connected successfully")
 
+	// Load dynamic configuration from database
+	if err := cfg.LoadDynamicConfig(db.DB); err != nil {
+		log.Printf("Warning: Failed to load dynamic config from database: %v", err)
+		log.Println("Using environment variables as configuration source")
+	} else {
+		log.Println("Dynamic configuration loaded from database")
+	}
+
 	// Initialize Redis
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.GetAddr(),
@@ -157,7 +165,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, jwtManager, twitterOAuth2)
 	emailService := service.NewEmailService(emailSender, userRepo, resetTokenRepo, cfg.Server.FrontendURL)
 	settingsService := service.NewUserSettingsService(settingsRepo)
-	systemSettingsService := service.NewSystemSettingsService(systemSettingsRepo)
+	systemSettingsService := service.NewSystemSettingsService(systemSettingsRepo, cfg.Encryption.Key)
 	adminService := service.NewAdminService(userRepo, modelRepo, auditRepo, tokenUsageRepo, convRepo, msgRepo, cfg.Encryption.Key)
 
 	// Load default rate limit from database (override env var if exists)
@@ -332,6 +340,7 @@ func setupRouter(cfg *config.Config, routerCfg *api.RouterConfig) *gin.Engine {
 			// System settings
 			admin.GET("/system/settings", routerCfg.AdminHandler.GetSystemSettings)
 			admin.PUT("/system/settings", routerCfg.AdminHandler.UpdateSystemSettings)
+			admin.POST("/system/test-email", routerCfg.AdminHandler.TestEmailConfiguration)
 		}
 
 		// Super admin routes
