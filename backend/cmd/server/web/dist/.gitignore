@@ -1,0 +1,8 @@
+# Ignore all files in dist (will be generated during build)
+*
+
+# But keep the directory structure and placeholder files
+!.gitignore
+!index.html
+!assets/
+!assets/.gitkeep

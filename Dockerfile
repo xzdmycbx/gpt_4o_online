@@ -27,8 +27,8 @@ RUN go mod download
 # 复制后端代码
 COPY backend/ ./
 
-# 从前端构建阶段复制构建产物
-COPY --from=frontend-builder /frontend/dist ./web/dist
+# 从前端构建阶段复制构建产物到正确位置（go:embed 需要）
+COPY --from=frontend-builder /frontend/dist ./cmd/server/web/dist
 
 # 构建后端主程序（前端已嵌入）
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o ai-chat cmd/server/main.go

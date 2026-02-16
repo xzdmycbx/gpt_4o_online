@@ -32,7 +32,7 @@ import (
 	"github.com/ai-chat/backend/internal/service"
 )
 
-//go:embed ../../web/dist
+//go:embed web/dist
 var staticFiles embed.FS
 
 func main() {
