@@ -32,7 +32,7 @@ import (
 	"github.com/ai-chat/backend/internal/service"
 )
 
-//go:embed web/dist/*
+//go:embed ../../web/dist
 var staticFiles embed.FS
 
 func main() {
@@ -361,7 +361,11 @@ func serveStaticFiles(router *gin.Engine, cfg *config.Config) {
 		return
 	}
 
-	router.StaticFS("/assets", http.FS(staticFS))
+	// Serve assets directory
+	assetsFS, err := fs.Sub(staticFS, "assets")
+	if err == nil {
+		router.StaticFS("/assets", http.FS(assetsFS))
+	}
 
 	// Serve index.html for all non-API routes (SPA routing)
 	router.NoRoute(func(c *gin.Context) {
@@ -372,7 +376,7 @@ func serveStaticFiles(router *gin.Engine, cfg *config.Config) {
 		}
 
 		// Serve index.html for frontend routes
-		data, err := staticFiles.ReadFile("web/dist/index.html")
+		data, err := staticFS.ReadFile("index.html")
 		if err != nil {
 			c.String(http.StatusNotFound, "Frontend not found")
 			return
