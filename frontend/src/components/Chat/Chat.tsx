@@ -328,7 +328,7 @@ const Chat: React.FC = () => {
     setMessages(prev => [...prev, tempUserMsg]);
 
     try {
-      const response = await apiClient.post(`/conversations/${activeConversation}/messages`, {
+      await apiClient.post(`/conversations/${activeConversation}/messages`, {
         content: userMessage,
       });
 

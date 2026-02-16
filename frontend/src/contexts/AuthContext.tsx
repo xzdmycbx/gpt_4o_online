@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import api from '../api/client';
 
 interface User {
@@ -31,12 +31,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(api.getToken());
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Always try to load user on mount - supports both localStorage token and HttpOnly cookie
-    loadCurrentUser();
-  }, []);
-
-  const loadCurrentUser = async () => {
+  const loadCurrentUser = useCallback(async () => {
     try {
       const response = await api.auth.getCurrentUser();
       setUser(response.user);
@@ -55,7 +50,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    // Always try to load user on mount - supports both localStorage token and HttpOnly cookie
+    loadCurrentUser();
+  }, [loadCurrentUser]);
 
   const login = async (username: string, password: string) => {
     const response = await api.auth.login(username, password);

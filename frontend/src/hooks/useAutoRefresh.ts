@@ -12,7 +12,7 @@ export const useAutoRefresh = (
   enabled: boolean = true
 ) => {
   const savedCallback = useRef(callback);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   // Update callback ref when it changes
   useEffect(() => {
