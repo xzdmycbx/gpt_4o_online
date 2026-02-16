@@ -2,7 +2,8 @@
 bin/
 *.log
 
-# Docker volumes
+# Docker/local runtime data
+data/
 postgres_data/
 redis_data/
 geoip_data/

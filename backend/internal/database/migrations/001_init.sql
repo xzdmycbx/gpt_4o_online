@@ -465,4 +465,3 @@ COMMENT ON TABLE token_usage IS 'Token usage tracking for statistics and leaderb
 COMMENT ON TABLE email_config IS 'Email service configuration';
 COMMENT ON TABLE audit_logs IS 'Audit trail of system actions';
 COMMENT ON TABLE user_settings IS 'User preferences and settings with multi-device sync';
-COMMENT ON TABLE password_reset_tokens IS 'Password reset token tracking';

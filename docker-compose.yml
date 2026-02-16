@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,13 +7,13 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change_this_password_in_production}
       POSTGRES_DB: ${DB_NAME:-ai_chat_db}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
       - ./backend/internal/database/migrations:/docker-entrypoint-initdb.d
     networks:
       - ai_chat_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ai_chat_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ai_chat_user} -d ${DB_NAME:-ai_chat_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,7 +23,7 @@ services:
     container_name: ai_chat_redis
     command: redis-server ${REDIS_PASSWORD:+--requirepass} ${REDIS_PASSWORD}
     volumes:
-      - redis_data:/data
+      - ./data/redis:/data
     networks:
       - ai_chat_network
     restart: unless-stopped
@@ -49,7 +47,7 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${DB_USER:-ai_chat_user}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-change_this_password_in_production}
       - DB_NAME=${DB_NAME:-ai_chat_db}
       - DB_SSLMODE=disable
       - REDIS_HOST=redis
@@ -63,7 +61,7 @@ services:
       - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
       - GEOIP_BLOCK_CHINA=${GEOIP_BLOCK_CHINA:-true}
       - RATE_LIMIT_DEFAULT_PER_MINUTE=${RATE_LIMIT_DEFAULT_PER_MINUTE:-20}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
       - EMAIL_PROVIDER=${EMAIL_PROVIDER:-smtp}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
@@ -77,13 +75,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./data/app:/app/data
     networks:
       - ai_chat_network
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redis_data:
 
 networks:
   ai_chat_network:
