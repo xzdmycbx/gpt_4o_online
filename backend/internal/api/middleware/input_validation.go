@@ -35,7 +35,7 @@ var (
 func InputValidationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check query parameters
-		for key, values := range c.Request.URL.Query() {
+		for _, values := range c.Request.URL.Query() {
 			for _, value := range values {
 				if isSuspicious(value) {
 					c.JSON(http.StatusBadRequest, gin.H{
@@ -50,7 +50,7 @@ func InputValidationMiddleware() gin.HandlerFunc {
 		// Check form data (if exists)
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
 			if err := c.Request.ParseForm(); err == nil {
-				for key, values := range c.Request.PostForm {
+				for _, values := range c.Request.PostForm {
 					for _, value := range values {
 						if isSuspicious(value) {
 							c.JSON(http.StatusBadRequest, gin.H{

@@ -376,7 +376,7 @@ func serveStaticFiles(router *gin.Engine, cfg *config.Config) {
 		}
 
 		// Serve index.html for frontend routes
-		data, err := staticFS.ReadFile("index.html")
+		data, err := fs.ReadFile(staticFS, "index.html")
 		if err != nil {
 			c.String(http.StatusNotFound, "Frontend not found")
 			return
