@@ -124,7 +124,7 @@ func (s *SystemSettingsService) UpdateSettings(ctx context.Context, dto *model.S
 		updates["oauth2_twitter_client_id"] = dto.OAuth2TwitterClientID
 	}
 	// Client Secret - 只在不为空且不是掩码时才更新
-	if dto.OAuth2TwitterClientSecret != "" && dto.OAuth2TwitterClientSecret != "********" {
+	if dto.OAuth2TwitterClientSecret != "" && !containsMask(dto.OAuth2TwitterClientSecret) {
 		encrypted, err := crypto.Encrypt(dto.OAuth2TwitterClientSecret, s.encryptionKey)
 		if err != nil {
 			return fmt.Errorf("failed to encrypt oauth2 client secret: %w", err)
@@ -150,7 +150,7 @@ func (s *SystemSettingsService) UpdateSettings(ctx context.Context, dto *model.S
 		updates["email_smtp_user"] = dto.EmailSMTPUser
 	}
 	// SMTP Password - 只在不为空且不是掩码时才更新
-	if dto.EmailSMTPPassword != "" && dto.EmailSMTPPassword != "********" {
+	if dto.EmailSMTPPassword != "" && !containsMask(dto.EmailSMTPPassword) {
 		encrypted, err := crypto.Encrypt(dto.EmailSMTPPassword, s.encryptionKey)
 		if err != nil {
 			return fmt.Errorf("failed to encrypt email password: %w", err)
@@ -183,7 +183,7 @@ func (s *SystemSettingsService) UpdateSettings(ctx context.Context, dto *model.S
 
 // containsMask 检查字符串是否包含掩码
 func containsMask(s string) bool {
-	return len(s) > 0 && s[:8] == "********"
+	return len(s) >= 8 && s[:8] == "********"
 }
 
 // GetRateLimitDefault retrieves the default rate limit setting
@@ -273,14 +273,18 @@ AI Chat System - 系统配置测试
 	return sender.SendEmail(testEmail, subject, htmlBody, textBody)
 }
 
-// ValidateEmailConfig 验证邮件配置
-func (s *SystemSettingsService) ValidateEmailConfig(dto *model.SystemSettingsDTO) error {
+// ValidateEmailConfig validates email configuration.
+func (s *SystemSettingsService) ValidateEmailConfig(ctx context.Context, dto *model.SystemSettingsDTO) error {
 	if !dto.EmailEnabled {
 		return nil
 	}
 
 	if dto.EmailFrom == "" {
 		return fmt.Errorf("email_from is required")
+	}
+
+	if dto.EmailProvider != "smtp" && dto.EmailProvider != "resend" {
+		return fmt.Errorf("invalid email_provider: must be 'smtp' or 'resend'")
 	}
 
 	if dto.EmailProvider == "smtp" {
@@ -290,19 +294,23 @@ func (s *SystemSettingsService) ValidateEmailConfig(dto *model.SystemSettingsDTO
 		if dto.EmailSMTPPort <= 0 {
 			return fmt.Errorf("email_smtp_port must be greater than 0")
 		}
-	} else if dto.EmailProvider == "resend" {
-		if dto.EmailResendAPIKey == "" && !containsMask(dto.EmailResendAPIKey) {
+	}
+
+	if dto.EmailProvider == "resend" && (dto.EmailResendAPIKey == "" || containsMask(dto.EmailResendAPIKey)) {
+		hasStoredKey, err := s.settingsRepo.HasNonEmptyValue(ctx, "email_resend_api_key")
+		if err != nil {
+			return fmt.Errorf("failed to validate existing resend api key: %w", err)
+		}
+		if !hasStoredKey {
 			return fmt.Errorf("email_resend_api_key is required for Resend provider")
 		}
-	} else {
-		return fmt.Errorf("invalid email_provider: must be 'smtp' or 'resend'")
 	}
 
 	return nil
 }
 
-// ValidateOAuth2Config 验证 OAuth2 配置
-func (s *SystemSettingsService) ValidateOAuth2Config(dto *model.SystemSettingsDTO) error {
+// ValidateOAuth2Config validates OAuth2 configuration.
+func (s *SystemSettingsService) ValidateOAuth2Config(ctx context.Context, dto *model.SystemSettingsDTO) error {
 	if !dto.OAuth2TwitterEnabled {
 		return nil
 	}
@@ -311,8 +319,14 @@ func (s *SystemSettingsService) ValidateOAuth2Config(dto *model.SystemSettingsDT
 		return fmt.Errorf("oauth2_twitter_client_id is required")
 	}
 
-	if dto.OAuth2TwitterClientSecret == "" && !containsMask(dto.OAuth2TwitterClientSecret) {
-		return fmt.Errorf("oauth2_twitter_client_secret is required")
+	if dto.OAuth2TwitterClientSecret == "" || containsMask(dto.OAuth2TwitterClientSecret) {
+		hasStoredSecret, err := s.settingsRepo.HasNonEmptyValue(ctx, "oauth2_twitter_client_secret")
+		if err != nil {
+			return fmt.Errorf("failed to validate existing oauth2 client secret: %w", err)
+		}
+		if !hasStoredSecret {
+			return fmt.Errorf("oauth2_twitter_client_secret is required")
+		}
 	}
 
 	if dto.OAuth2TwitterRedirectURL == "" {

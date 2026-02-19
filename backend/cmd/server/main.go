@@ -114,7 +114,7 @@ func main() {
 			cfg.Email.SMTPUser,
 			cfg.Email.SMTPPassword,
 			cfg.Email.EmailFrom,
-			"",
+			cfg.Email.FromName,
 			"",
 		)
 		log.Println("SMTP email sender initialized")
@@ -126,7 +126,7 @@ func main() {
 			"",
 			"",
 			cfg.Email.EmailFrom,
-			"",
+			cfg.Email.FromName,
 			cfg.Email.ResendAPIKey,
 		)
 		log.Println("Resend email sender initialized")

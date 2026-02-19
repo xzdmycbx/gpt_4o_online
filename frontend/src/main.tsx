@@ -21,10 +21,10 @@ const queryClient = new QueryClient({
 // Initialize CSRF token on app start
 apiClient.initCSRFToken();
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
+// Register service worker only in production to avoid dev reload loops.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').catch((error) => {
+    navigator.serviceWorker.register('/sw.js').catch((error) => {
       console.error('Service worker registration failed:', error);
     });
   });

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -457,13 +458,13 @@ func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
 	}
 
 	// 验证邮件配置
-	if err := h.systemSettingsService.ValidateEmailConfig(&dto); err != nil {
+	if err := h.systemSettingsService.ValidateEmailConfig(c.Request.Context(), &dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// 验证 OAuth2 配置
-	if err := h.systemSettingsService.ValidateOAuth2Config(&dto); err != nil {
+	if err := h.systemSettingsService.ValidateOAuth2Config(c.Request.Context(), &dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

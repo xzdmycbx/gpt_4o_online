@@ -107,7 +107,7 @@ func (r *SystemSettingsRepository) Update(ctx context.Context, key, value string
 	return nil
 }
 
-// UpdateMultiple updates multiple settings in a transaction
+// UpdateMultiple updates multiple settings in a transaction using UPSERT
 func (r *SystemSettingsRepository) UpdateMultiple(ctx context.Context, updates map[string]string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -116,9 +116,10 @@ func (r *SystemSettingsRepository) UpdateMultiple(ctx context.Context, updates m
 	defer tx.Rollback()
 
 	query := `
-		UPDATE system_settings
-		SET setting_value = $2, updated_at = CURRENT_TIMESTAMP
-		WHERE setting_key = $1
+		INSERT INTO system_settings (setting_key, setting_value, value_type)
+		VALUES ($1, $2, 'string')
+		ON CONFLICT (setting_key) DO UPDATE
+		SET setting_value = EXCLUDED.setting_value, updated_at = CURRENT_TIMESTAMP
 	`
 
 	for key, value := range updates {
@@ -133,4 +134,22 @@ func (r *SystemSettingsRepository) UpdateMultiple(ctx context.Context, updates m
 	}
 
 	return nil
+}
+
+// HasNonEmptyValue checks whether a setting exists and has a non-empty value.
+func (r *SystemSettingsRepository) HasNonEmptyValue(ctx context.Context, key string) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM system_settings
+			WHERE setting_key = $1 AND setting_value <> ''
+		)
+	`
+
+	var exists bool
+	if err := r.db.QueryRowContext(ctx, query, key).Scan(&exists); err != nil {
+		return false, fmt.Errorf("failed to check setting value for %s: %w", key, err)
+	}
+
+	return exists, nil
 }

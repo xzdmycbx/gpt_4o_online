@@ -78,6 +78,7 @@ type EmailConfig struct {
 	SMTPUser      string
 	SMTPPassword  string
 	EmailFrom     string
+	FromName      string
 	ResendAPIKey  string
 }
 
@@ -344,6 +345,9 @@ func (c *Config) LoadDynamicConfig(db *sql.DB) error {
 	}
 	if val, ok := settings["email_from"]; ok && val != "" {
 		c.Email.EmailFrom = val
+	}
+	if val, ok := settings["email_from_name"]; ok && val != "" {
+		c.Email.FromName = val
 	}
 	if val, ok := settings["email_resend_api_key"]; ok && val != "" {
 		// 解密
