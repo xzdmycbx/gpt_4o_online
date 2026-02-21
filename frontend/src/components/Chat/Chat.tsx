@@ -252,6 +252,10 @@ interface Message {
   created_at: string;
 }
 
+const ensureArray = <T,>(value: unknown): T[] => {
+  return Array.isArray(value) ? (value as T[]) : [];
+};
+
 const Chat: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
@@ -282,20 +286,22 @@ const Chat: React.FC = () => {
   const loadConversations = async () => {
     try {
       const response = await apiClient.get('/conversations');
-      // Backend returns {conversations: [...]}
-      setConversations(response.data.conversations || response.data || []);
+      // Backend returns {conversations: [...]}; handle null/invalid payloads safely.
+      setConversations(ensureArray<Conversation>(response.data?.conversations));
     } catch (error) {
       console.error('Failed to load conversations:', error);
+      setConversations([]);
     }
   };
 
   const loadMessages = async (conversationId: string) => {
     try {
       const response = await apiClient.get(`/conversations/${conversationId}/messages`);
-      // Backend returns {messages: [...]}
-      setMessages(response.data.messages || response.data || []);
+      // Backend returns {messages: [...]}; handle null/invalid payloads safely.
+      setMessages(ensureArray<Message>(response.data?.messages));
     } catch (error) {
       console.error('Failed to load messages:', error);
+      setMessages([]);
     }
   };
 

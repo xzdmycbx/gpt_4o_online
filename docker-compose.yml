@@ -58,6 +58,9 @@ services:
       - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
       - GEOIP_BLOCK_CHINA=${GEOIP_BLOCK_CHINA:-true}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SUPER_ADMIN_USERNAME=${SUPER_ADMIN_USERNAME:-admin}
+      - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-change_this_password_in_production}
+      - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@example.com}
       # OAuth2、邮件、AI、速率限制等配置请在管理后台系统设置中配置
     ports:
       - "8080:8080"
