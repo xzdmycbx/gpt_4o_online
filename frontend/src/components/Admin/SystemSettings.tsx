@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
 
@@ -57,10 +57,10 @@ const DEFAULT_EXPANDED_STATE: Record<SectionKey, boolean> = {
 const PRESET_MEMORY_MODELS = ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4o'];
 
 const Card = styled.div`
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   margin-bottom: 24px;
-  border: 1px solid #2d3748;
+  border: 1px solid var(--border-primary);
   overflow: hidden;
 `;
 
@@ -79,20 +79,20 @@ const CardTitle = styled.h2`
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #e8eaed;
+  color: var(--text-primary);
   text-align: left;
 `;
 
 const ToggleIcon = styled.span<{ expanded: boolean }>`
   font-size: 14px;
-  color: #a0aec0;
+  color: var(--text-secondary);
   transform: rotate(${props => (props.expanded ? '180deg' : '0deg')});
   transition: transform 0.2s ease;
 `;
 
 const CardBody = styled.div`
   padding: 0 24px 24px;
-  border-top: 1px solid #2d3748;
+  border-top: 1px solid var(--border-primary);
 `;
 
 const FormGroup = styled.div`
@@ -102,7 +102,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   display: block;
   margin-bottom: 8px;
-  color: #a0aec0;
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
 `;
@@ -111,7 +111,7 @@ const SwitchLabel = styled.label`
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #a0aec0;
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
 `;
@@ -123,10 +123,10 @@ const Checkbox = styled.input`
 const Input = styled.input`
   width: 100%;
   padding: 12px 16px;
-  background: #0f1419;
-  border: 1px solid #2d3748;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 14px;
   transition: all 0.2s;
 
@@ -140,10 +140,10 @@ const Input = styled.input`
 const Select = styled.select`
   width: 100%;
   padding: 12px 16px;
-  background: #0f1419;
-  border: 1px solid #2d3748;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 14px;
   transition: all 0.2s;
 
@@ -195,7 +195,7 @@ const Message = styled.div<{ type: MessageType }>`
 `;
 
 const HelpText = styled.p`
-  color: #718096;
+  color: var(--text-muted);
   font-size: 13px;
   margin: 8px 0 0 0;
 `;
@@ -760,3 +760,4 @@ const SystemSettingsPage: React.FC = () => {
 };
 
 export default SystemSettingsPage;
+

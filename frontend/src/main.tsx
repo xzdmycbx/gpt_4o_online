@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import apiClient from './api/client';
 import './index.css';
 
@@ -36,7 +37,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <AuthProvider>
           <SettingsProvider>
-            <App />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
           </SettingsProvider>
         </AuthProvider>
       </BrowserRouter>

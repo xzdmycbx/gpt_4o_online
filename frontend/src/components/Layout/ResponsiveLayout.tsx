@@ -13,13 +13,13 @@ const LayoutContainer = styled.div`
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background-color: #0e1621;
+  background-color: var(--bg-primary);
 `;
 
 const Sidebar = styled.aside<{ $show: boolean }>`
   width: 280px;
-  background-color: #1e2832;
-  border-right: 1px solid #3c4043;
+  background-color: var(--bg-tertiary);
+  border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   transition: transform 250ms ease-in-out;
@@ -84,3 +84,4 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
 };
 
 export default ResponsiveLayout;
+

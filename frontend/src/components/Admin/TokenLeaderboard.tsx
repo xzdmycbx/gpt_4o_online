@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
+import { ensureArray, ensureNumber } from '../../utils/safe';
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   overflow: hidden;
 `;
@@ -14,8 +15,8 @@ const Table = styled.table`
 const Th = styled.th`
   padding: 16px;
   text-align: left;
-  background: #0f1419;
-  color: #a0aec0;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
@@ -24,8 +25,8 @@ const Th = styled.th`
 
 const Td = styled.td`
   padding: 16px;
-  border-top: 1px solid #2d3748;
-  color: #e8eaed;
+  border-top: 1px solid var(--border-primary);
+  color: var(--text-primary);
 `;
 
 const Rank = styled.div<{ rank: number }>`
@@ -42,13 +43,13 @@ const Rank = styled.div<{ rank: number }>`
     if (props.rank === 3) return 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
     return '#4a5568';
   }};
-  color: ${props => props.rank <= 3 ? '#1a202c' : '#e8eaed'};
+  color: ${props => props.rank <= 3 ? '#1a202c' : 'var(--text-primary)'};
 `;
 
 const ProgressBar = styled.div`
   width: 100%;
   height: 8px;
-  background: #0f1419;
+  background: var(--bg-elevated);
   border-radius: 4px;
   overflow: hidden;
   position: relative;
@@ -92,7 +93,7 @@ const RefreshButton = styled.button`
 `;
 
 const LastUpdated = styled.div`
-  color: #a0aec0;
+  color: var(--text-secondary);
   font-size: 13px;
 `;
 
@@ -112,11 +113,11 @@ const TokenLeaderboard: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiClient.get('/admin/statistics/tokens');
-      // Backend returns {leaderboard: [...]} but handle both formats
-      setStats(response.data.leaderboard || response.data || []);
+      setStats(ensureArray<TokenStat>(response.data?.leaderboard));
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Failed to load token stats:', error);
+      setStats([]);
     } finally {
       setLoading(false);
     }
@@ -130,7 +131,7 @@ const TokenLeaderboard: React.FC = () => {
   // Auto-refresh every 60 seconds
   useAutoRefresh(loadStats, 60000);
 
-  const maxTokens = Math.max(...stats.map(s => s.total_tokens), 1);
+  const maxTokens = Math.max(...stats.map(s => ensureNumber(s.total_tokens)), 1);
 
   const formatNumber = (num: number) => {
     return num.toLocaleString();
@@ -171,11 +172,11 @@ const TokenLeaderboard: React.FC = () => {
               <Rank rank={index + 1}>{index + 1}</Rank>
             </Td>
             <Td>{stat.username}</Td>
-            <Td>{formatNumber(stat.total_tokens)}</Td>
-            <Td>{formatNumber(stat.total_requests)}</Td>
+            <Td>{formatNumber(ensureNumber(stat.total_tokens))}</Td>
+            <Td>{formatNumber(ensureNumber(stat.total_requests))}</Td>
             <Td>
               <ProgressBar>
-                <Progress width={(stat.total_tokens / maxTokens) * 100} />
+                <Progress width={(ensureNumber(stat.total_tokens) / maxTokens) * 100} />
               </ProgressBar>
             </Td>
           </tr>
@@ -187,3 +188,4 @@ const TokenLeaderboard: React.FC = () => {
 };
 
 export default TokenLeaderboard;
+

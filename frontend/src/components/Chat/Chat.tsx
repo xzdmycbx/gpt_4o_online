@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
   display: flex;
   height: 100vh;
-  background: #0e1621;
-  color: #e8eaed;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   position: relative;
 `;
 
 const Sidebar = styled.div<{ $isOpen: boolean }>`
   width: 320px;
-  background: #1a2332;
-  border-right: 1px solid #2d3748;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease-in-out;
@@ -70,7 +72,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 
 const SidebarHeader = styled.div`
   padding: 20px;
-  border-bottom: 1px solid #2d3748;
+  border-bottom: 1px solid var(--border-primary);
 `;
 
 const Title = styled.h2`
@@ -111,7 +113,7 @@ const ConversationItem = styled.div<{ active?: boolean }>`
   cursor: pointer;
   border-left: 3px solid ${props => props.active ? '#667eea' : 'transparent'};
   background: ${props => props.active ? 'rgba(102, 126, 234, 0.1)' : 'transparent'};
-  border-bottom: 1px solid #2d3748;
+  border-bottom: 1px solid var(--border-primary);
   transition: all 0.2s;
 
   &:hover {
@@ -122,7 +124,7 @@ const ConversationItem = styled.div<{ active?: boolean }>`
 const ConversationTitle = styled.div`
   font-weight: 500;
   margin-bottom: 4px;
-  color: #e8eaed;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -130,7 +132,7 @@ const ConversationTitle = styled.div`
 
 const ConversationPreview = styled.div`
   font-size: 13px;
-  color: #718096;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -144,7 +146,7 @@ const ChatArea = styled.div`
 
 const ChatHeader = styled.div`
   padding: 20px;
-  border-bottom: 1px solid #2d3748;
+  border-bottom: 1px solid var(--border-primary);
 `;
 
 const Messages = styled.div`
@@ -159,10 +161,10 @@ const Messages = styled.div`
 const MessageBubble = styled.div<{ isUser?: boolean }>`
   max-width: 70%;
   align-self: ${props => props.isUser ? 'flex-end' : 'flex-start'};
-  background: ${props => props.isUser ? '#2b5278' : '#1e2832'};
+  background: ${props => props.isUser ? '#2b5278' : 'var(--bg-tertiary)'};
   padding: 12px 16px;
   border-radius: 12px;
-  color: #e8eaed;
+  color: var(--text-primary);
   word-wrap: break-word;
   line-height: 1.5;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -170,26 +172,26 @@ const MessageBubble = styled.div<{ isUser?: boolean }>`
 
 const MessageTime = styled.div<{ isUser?: boolean }>`
   font-size: 11px;
-  color: #718096;
+  color: var(--text-muted);
   margin-top: 4px;
   text-align: ${props => props.isUser ? 'right' : 'left'};
 `;
 
 const InputArea = styled.div`
   padding: 20px;
-  border-top: 1px solid #2d3748;
+  border-top: 1px solid var(--border-primary);
   display: flex;
   gap: 12px;
-  background: #1a2332;
+  background: var(--bg-secondary);
 `;
 
 const Input = styled.textarea`
   flex: 1;
   padding: 12px 16px;
-  background: #0f1419;
-  border: 1px solid #2d3748;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
   border-radius: 12px;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 14px;
   resize: none;
   font-family: inherit;
@@ -225,7 +227,7 @@ const SendButton = styled.button`
 const WelcomeMessage = styled.div`
   text-align: center;
   padding: 40px;
-  color: #718096;
+  color: var(--text-muted);
   margin: auto;
 `;
 
@@ -236,6 +238,39 @@ const WelcomeTitle = styled.h1`
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+`;
+
+const TopActions = styled.div`
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 21;
+  display: flex;
+  gap: 8px;
+
+  @media (max-width: 768px) {
+    top: 16px;
+    right: 16px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: calc(100vw - 84px);
+  }
+`;
+
+const ActionButton = styled.button`
+  padding: 8px 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #667eea;
+    color: #667eea;
+  }
 `;
 
 interface Conversation {
@@ -257,6 +292,8 @@ const ensureArray = <T,>(value: unknown): T[] => {
 };
 
 const Chat: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -362,8 +399,24 @@ const Chat: React.FC = () => {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const canAccessAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
   return (
     <Container>
+      <TopActions>
+        <ActionButton onClick={() => navigate('/chat')}>对话</ActionButton>
+        <ActionButton onClick={() => navigate('/settings')}>设置</ActionButton>
+        {canAccessAdmin && (
+          <ActionButton onClick={() => navigate('/admin')}>管理后台</ActionButton>
+        )}
+        <ActionButton onClick={handleLogout}>退出登录</ActionButton>
+      </TopActions>
+
       <MobileMenuButton onClick={() => setSidebarOpen(!sidebarOpen)}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="3" y1="12" x2="21" y2="12"/>
@@ -449,3 +502,4 @@ const Chat: React.FC = () => {
 };
 
 export default Chat;
+

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useSettings as useSettingsHook } from '../hooks/useSettings';
 
 interface SettingsContextType {
@@ -12,6 +12,26 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const settingsHook = useSettingsHook();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applyTheme = () => {
+      const preferredTheme = settingsHook.settings.theme;
+      const resolvedTheme = preferredTheme === 'auto'
+        ? (media.matches ? 'dark' : 'light')
+        : preferredTheme;
+      root.setAttribute('data-theme', resolvedTheme);
+    };
+
+    applyTheme();
+    media.addEventListener('change', applyTheme);
+
+    return () => {
+      media.removeEventListener('change', applyTheme);
+    };
+  }, [settingsHook.settings.theme]);
 
   return (
     <SettingsContext.Provider value={settingsHook}>

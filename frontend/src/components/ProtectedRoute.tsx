@@ -8,12 +8,12 @@ const ErrorContainer = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #0e1621;
+  background-color: var(--bg-primary);
   padding: 16px;
 `;
 
 const ErrorCard = styled.div`
-  background-color: #1e2832;
+  background-color: var(--bg-tertiary);
   border-radius: 12px;
   padding: 48px;
   text-align: center;
@@ -29,13 +29,13 @@ const ErrorTitle = styled.h1`
 
 const ErrorMessage = styled.p`
   font-size: 18px;
-  color: #e8eaed;
+  color: var(--text-primary);
   margin-bottom: 8px;
 `;
 
 const ErrorSubMessage = styled.p`
   font-size: 14px;
-  color: #9aa0a6;
+  color: var(--text-secondary);
   margin-bottom: 24px;
 `;
 
@@ -44,7 +44,7 @@ const BackButton = styled.a`
   padding: 12px 24px;
   border-radius: 8px;
   background-color: #2b5278;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 500;
   text-decoration: none;
@@ -104,3 +104,4 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 };
 
 export default ProtectedRoute;
+

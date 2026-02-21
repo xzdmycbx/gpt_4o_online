@@ -21,8 +21,8 @@ const App: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#0e1621',
-        color: '#e8eaed',
+        backgroundColor: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
       }}>
         <div>Loading...</div>
       </div>
@@ -73,3 +73,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

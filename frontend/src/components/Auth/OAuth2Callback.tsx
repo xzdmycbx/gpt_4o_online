@@ -9,12 +9,12 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #0e1621;
+  background-color: var(--bg-primary);
   padding: 16px;
 `;
 
 const Card = styled.div`
-  background-color: #1e2832;
+  background-color: var(--bg-tertiary);
   border-radius: 12px;
   padding: 48px;
   text-align: center;
@@ -22,7 +22,7 @@ const Card = styled.div`
 `;
 
 const Spinner = styled.div`
-  border: 3px solid #3c4043;
+  border: 3px solid var(--border-primary);
   border-top: 3px solid #2b5278;
   border-radius: 50%;
   width: 48px;
@@ -37,7 +37,7 @@ const Spinner = styled.div`
 `;
 
 const Message = styled.p`
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 16px;
   margin-bottom: 8px;
 `;
@@ -47,7 +47,7 @@ const ErrorMessage = styled(Message)`
 `;
 
 const SubMessage = styled.p`
-  color: #9aa0a6;
+  color: var(--text-secondary);
   font-size: 14px;
 `;
 
@@ -119,3 +119,4 @@ const OAuth2Callback: React.FC = () => {
 };
 
 export default OAuth2Callback;
+

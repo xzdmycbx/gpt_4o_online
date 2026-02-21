@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { media } from '../../styles/responsive';
 
@@ -17,18 +19,18 @@ const Container = styled.div`
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
-  color: #e8eaed;
+  color: var(--text-primary);
   margin-bottom: 8px;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: #9aa0a6;
+  color: var(--text-secondary);
   margin-bottom: 32px;
 `;
 
 const Section = styled.div`
-  background-color: #1e2832;
+  background-color: var(--bg-tertiary);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 24px;
@@ -37,7 +39,7 @@ const Section = styled.div`
 const SectionTitle = styled.h2`
   font-size: 18px;
   font-weight: 600;
-  color: #e8eaed;
+  color: var(--text-primary);
   margin-bottom: 16px;
 `;
 
@@ -56,15 +58,15 @@ const InputGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #e8eaed;
+  color: var(--text-primary);
 `;
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid #3c4043;
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  background-color: #0e1621;
-  color: #e8eaed;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 16px;
   transition: border-color 150ms ease-in-out;
 
@@ -74,7 +76,7 @@ const Input = styled.input`
   }
 
   &::placeholder {
-    color: #5f6368;
+    color: var(--text-muted);
   }
 
   &:disabled {
@@ -88,7 +90,7 @@ const Button = styled.button`
   border: none;
   border-radius: 8px;
   background-color: #2b5278;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -116,7 +118,7 @@ const Message = styled.div<{ $isError?: boolean }>`
 
 const InfoText = styled.p`
   font-size: 14px;
-  color: #9aa0a6;
+  color: var(--text-secondary);
   margin-top: 8px;
 `;
 
@@ -131,7 +133,7 @@ const InfoItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background-color: #0e1621;
+  background-color: var(--bg-primary);
   border-radius: 8px;
 
   ${media.mobile} {
@@ -143,17 +145,42 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.span`
   font-size: 14px;
-  color: #9aa0a6;
+  color: var(--text-secondary);
 `;
 
 const InfoValue = styled.span`
   font-size: 14px;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-weight: 500;
 `;
 
+const Select = styled.select`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 16px;
+  transition: border-color 150ms ease-in-out;
+
+  &:focus {
+    outline: none;
+    border-color: #2b5278;
+  }
+`;
+
+const ActionRow = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+`;
+
 const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings, updateSettings } = useSettings();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -199,10 +226,37 @@ const Settings: React.FC = () => {
     return <Container>Loading...</Container>;
   }
 
+  const canAccessAdmin = user.role === 'admin' || user.role === 'super_admin';
+
   return (
     <Container>
       <Title>Settings</Title>
       <Subtitle>Manage your account settings and preferences</Subtitle>
+      <ActionRow>
+        <Button type="button" onClick={() => navigate('/chat')}>返回对话</Button>
+        {canAccessAdmin && (
+          <Button type="button" onClick={() => navigate('/admin')}>管理后台</Button>
+        )}
+      </ActionRow>
+
+      <Section>
+        <SectionTitle>Appearance</SectionTitle>
+        <InputGroup>
+          <Label htmlFor="themeMode">Theme Mode</Label>
+          <Select
+            id="themeMode"
+            value={settings.theme}
+            onChange={(e) => updateSettings({ theme: e.target.value as 'dark' | 'light' | 'auto' })}
+          >
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="auto">Auto (Follow System)</option>
+          </Select>
+          <InfoText>
+            当前主题: {settings.theme === 'auto' ? 'Auto' : settings.theme === 'light' ? 'Light' : 'Dark'}
+          </InfoText>
+        </InputGroup>
+      </Section>
 
       <Section>
         <SectionTitle>Account Information</SectionTitle>
@@ -293,3 +347,4 @@ const Settings: React.FC = () => {
 };
 
 export default Settings;
+

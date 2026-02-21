@@ -79,6 +79,9 @@ func (h *ChatHandler) ListConversations(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if conversations == nil {
+		conversations = []*model.Conversation{}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"conversations": conversations,
@@ -178,6 +181,9 @@ func (h *ChatHandler) GetMessages(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
+	}
+	if messages == nil {
+		messages = []*model.Message{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

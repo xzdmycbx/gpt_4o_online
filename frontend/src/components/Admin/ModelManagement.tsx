@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
+import { ensureArray } from '../../utils/safe';
 
 const Card = styled.div`
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
-  border: 1px solid #2d3748;
+  border: 1px solid var(--border-primary);
 `;
 
 const CardHeader = styled.div`
@@ -20,7 +21,7 @@ const CardHeader = styled.div`
 const ModelName = styled.h3`
   margin: 0;
   font-size: 18px;
-  color: #e8eaed;
+  color: var(--text-primary);
 `;
 
 const Badge = styled.span<{ isDefault?: boolean }>`
@@ -33,7 +34,7 @@ const Badge = styled.span<{ isDefault?: boolean }>`
 `;
 
 const Info = styled.div`
-  color: #a0aec0;
+  color: var(--text-secondary);
   font-size: 14px;
   margin-bottom: 8px;
 `;
@@ -83,20 +84,20 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 32px;
   max-width: 600px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  border: 1px solid #2d3748;
+  border: 1px solid var(--border-primary);
 `;
 
 const ModalTitle = styled.h3`
   margin: 0 0 24px 0;
   font-size: 20px;
-  color: #e8eaed;
+  color: var(--text-primary);
 `;
 
 const FormGroup = styled.div`
@@ -106,17 +107,17 @@ const FormGroup = styled.div`
 const Label = styled.label`
   display: block;
   margin-bottom: 8px;
-  color: #a0aec0;
+  color: var(--text-secondary);
   font-size: 14px;
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 12px 16px;
-  background: #0f1419;
-  border: 1px solid #2d3748;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 14px;
 
   &:focus {
@@ -128,10 +129,10 @@ const Input = styled.input`
 const Select = styled.select`
   width: 100%;
   padding: 12px 16px;
-  background: #0f1419;
-  border: 1px solid #2d3748;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 14px;
 
   &:focus {
@@ -171,10 +172,10 @@ const ModelManagement: React.FC = () => {
   const loadModels = async () => {
     try {
       const response = await apiClient.get('/admin/models');
-      // Backend returns {models: [...]} but handle both formats
-      setModels(response.data.models || response.data || []);
+      setModels(ensureArray<Model>(response.data?.models));
     } catch (error) {
       console.error('Failed to load models:', error);
+      setModels([]);
     }
   };
 
@@ -324,3 +325,4 @@ const ModelManagement: React.FC = () => {
 };
 
 export default ModelManagement;
+

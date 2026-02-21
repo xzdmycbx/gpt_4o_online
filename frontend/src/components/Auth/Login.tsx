@@ -9,12 +9,12 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #0e1621;
+  background-color: var(--bg-primary);
   padding: 16px;
 `;
 
 const Card = styled.div`
-  background-color: #1e2832;
+  background-color: var(--bg-tertiary);
   border-radius: 12px;
   padding: 32px;
   width: 100%;
@@ -29,14 +29,14 @@ const Card = styled.div`
 const Title = styled.h1`
   font-size: 24px;
   font-weight: 600;
-  color: #e8eaed;
+  color: var(--text-primary);
   margin-bottom: 8px;
   text-align: center;
 `;
 
 const Subtitle = styled.p`
   font-size: 14px;
-  color: #9aa0a6;
+  color: var(--text-secondary);
   margin-bottom: 32px;
   text-align: center;
 `;
@@ -56,15 +56,15 @@ const InputGroup = styled.div`
 const Label = styled.label`
   font-size: 14px;
   font-weight: 500;
-  color: #e8eaed;
+  color: var(--text-primary);
 `;
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid #3c4043;
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  background-color: #0e1621;
-  color: #e8eaed;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 16px;
   transition: border-color 150ms ease-in-out;
 
@@ -74,7 +74,7 @@ const Input = styled.input`
   }
 
   &::placeholder {
-    color: #5f6368;
+    color: var(--text-muted);
   }
 `;
 
@@ -83,7 +83,7 @@ const Button = styled.button`
   border: none;
   border-radius: 8px;
   background-color: #2b5278;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -112,7 +112,7 @@ const Footer = styled.div`
   margin-top: 24px;
   text-align: center;
   font-size: 14px;
-  color: #9aa0a6;
+  color: var(--text-secondary);
 
   a {
     color: #2b5278;
@@ -129,14 +129,14 @@ const Divider = styled.div`
   display: flex;
   align-items: center;
   margin: 24px 0;
-  color: #9aa0a6;
+  color: var(--text-secondary);
   font-size: 14px;
 
   &::before,
   &::after {
     content: '';
     flex: 1;
-    border-bottom: 1px solid #3c4043;
+    border-bottom: 1px solid var(--border-primary);
   }
 
   &::before {
@@ -155,10 +155,10 @@ const OAuth2Button = styled.button`
   gap: 12px;
   width: 100%;
   padding: 12px;
-  border: 1px solid #3c4043;
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  background-color: #1e2832;
-  color: #e8eaed;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -166,7 +166,7 @@ const OAuth2Button = styled.button`
 
   &:hover {
     background-color: #2a3542;
-    border-color: #5f6368;
+    border-color: var(--text-muted);
   }
 
   svg {
@@ -276,3 +276,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+

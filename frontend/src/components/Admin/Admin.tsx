@@ -10,14 +10,14 @@ import AuditLogs from './AuditLogs';
 const Container = styled.div`
   display: flex;
   height: 100vh;
-  background: #0e1621;
-  color: #e8eaed;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 `;
 
 const Sidebar = styled.div<{ isOpen?: boolean }>`
   width: 260px;
-  background: linear-gradient(180deg, #1a2332 0%, #0f1419 100%);
-  border-right: 1px solid #2d3748;
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-elevated) 100%);
+  border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   padding: 24px 0;
@@ -36,7 +36,7 @@ const Logo = styled.div`
   font-size: 20px;
   font-weight: 600;
   padding: 0 24px 24px;
-  border-bottom: 1px solid #2d3748;
+  border-bottom: 1px solid var(--border-primary);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -55,7 +55,7 @@ const NavItem = styled.div<{ active?: boolean }>`
   transition: all 0.2s;
   border-left: 3px solid ${props => props.active ? '#667eea' : 'transparent'};
   background: ${props => props.active ? 'rgba(102, 126, 234, 0.1)' : 'transparent'};
-  color: ${props => props.active ? '#667eea' : '#a0aec0'};
+  color: ${props => props.active ? '#667eea' : 'var(--text-secondary)'};
   font-weight: ${props => props.active ? '500' : '400'};
 
   &:hover {
@@ -73,7 +73,7 @@ const Content = styled.div`
 const Header = styled.div`
   margin-bottom: 32px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #2d3748;
+  border-bottom: 1px solid var(--border-primary);
 `;
 
 const Title = styled.h1`
@@ -87,7 +87,7 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: #718096;
+  color: var(--text-muted);
   margin: 0;
   font-size: 14px;
 `;
@@ -172,7 +172,7 @@ const Admin: React.FC = () => {
                 display: 'none',
                 background: 'transparent',
                 border: 'none',
-                color: '#e8eaed',
+                color: 'var(--text-primary)',
                 fontSize: '24px',
                 cursor: 'pointer',
                 padding: '8px',
@@ -201,3 +201,4 @@ const Admin: React.FC = () => {
 };
 
 export default Admin;
+

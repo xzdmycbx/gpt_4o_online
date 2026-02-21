@@ -16,15 +16,15 @@ const NavContainer = styled.nav`
     justify-content: space-between;
     height: 56px;
     padding: 0 16px;
-    background-color: #1e2832;
-    border-bottom: 1px solid #3c4043;
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-primary);
   }
 `;
 
 const MenuButton = styled.button`
   background: none;
   border: none;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 24px;
   cursor: pointer;
   padding: 8px;
@@ -46,7 +46,7 @@ const MenuButton = styled.button`
 const Title = styled.h1`
   font-size: 18px;
   font-weight: 500;
-  color: #e8eaed;
+  color: var(--text-primary);
   margin: 0;
 `;
 
@@ -63,3 +63,4 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({ onMenuClick, title =
 };
 
 export default MobileNavBar;
+

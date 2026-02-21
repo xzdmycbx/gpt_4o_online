@@ -224,6 +224,9 @@ func (h *AdminHandler) ListModels(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if models == nil {
+		models = []*model.AIModel{}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"models": models,
@@ -328,6 +331,9 @@ func (h *AdminHandler) TokenLeaderboard(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if leaderboard == nil {
+		leaderboard = []*model.TokenLeaderboard{}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"leaderboard": leaderboard,
@@ -354,6 +360,9 @@ func (h *AdminHandler) ListAuditLogs(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+	if logs == nil {
+		logs = []*model.AuditLog{}
 	}
 
 	// Estimate total (actual count would require additional query)

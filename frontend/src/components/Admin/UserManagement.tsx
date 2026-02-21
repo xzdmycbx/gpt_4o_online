@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
+import { ensureArray } from '../../utils/safe';
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   overflow: hidden;
 `;
@@ -13,8 +14,8 @@ const Table = styled.table`
 const Th = styled.th`
   padding: 16px;
   text-align: left;
-  background: #0f1419;
-  color: #a0aec0;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
@@ -23,8 +24,8 @@ const Th = styled.th`
 
 const Td = styled.td`
   padding: 16px;
-  border-top: 1px solid #2d3748;
-  color: #e8eaed;
+  border-top: 1px solid var(--border-primary);
+  color: var(--text-primary);
 `;
 
 const Button = styled.button<{ variant?: 'primary' | 'danger' | 'secondary' }>`
@@ -88,27 +89,27 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
   width: 90%;
-  border: 1px solid #2d3748;
+  border: 1px solid var(--border-primary);
 `;
 
 const ModalTitle = styled.h3`
   margin: 0 0 20px 0;
   font-size: 20px;
-  color: #e8eaed;
+  color: var(--text-primary);
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 12px 16px;
-  background: #0f1419;
-  border: 1px solid #2d3748;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #e8eaed;
+  color: var(--text-primary);
   font-size: 14px;
   margin-bottom: 16px;
 
@@ -121,7 +122,7 @@ const Input = styled.input`
 const Label = styled.label`
   display: block;
   margin-bottom: 8px;
-  color: #a0aec0;
+  color: var(--text-secondary);
   font-size: 14px;
 `;
 
@@ -152,9 +153,10 @@ const UserManagement: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiClient.get('/admin/users');
-      setUsers(response.data.users || []);
+      setUsers(ensureArray<User>(response.data?.users));
     } catch (error) {
       console.error('Failed to load users:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -304,3 +306,4 @@ const UserManagement: React.FC = () => {
 };
 
 export default UserManagement;
+

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
+import { ensureNumber } from '../../utils/safe';
 
 const Grid = styled.div`
   display: grid;
@@ -11,10 +12,10 @@ const Grid = styled.div`
 `;
 
 const Card = styled.div`
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
-  border: 1px solid #2d3748;
+  border: 1px solid var(--border-primary);
   transition: all 0.2s;
 
   &:hover {
@@ -25,7 +26,7 @@ const Card = styled.div`
 
 const CardTitle = styled.div`
   font-size: 13px;
-  color: #a0aec0;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 12px;
@@ -34,7 +35,7 @@ const CardTitle = styled.div`
 const CardValue = styled.div`
   font-size: 32px;
   font-weight: 600;
-  color: #e8eaed;
+  color: var(--text-primary);
   margin-bottom: 8px;
 `;
 
@@ -53,7 +54,7 @@ const Section = styled.div`
 const SectionTitle = styled.h2`
   font-size: 18px;
   font-weight: 600;
-  color: #e8eaed;
+  color: var(--text-primary);
   margin-bottom: 16px;
 `;
 
@@ -61,8 +62,8 @@ const InfoRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid #2d3748;
-  color: #a0aec0;
+  border-bottom: 1px solid var(--border-primary);
+  color: var(--text-secondary);
 
   &:last-child {
     border-bottom: none;
@@ -74,7 +75,7 @@ const InfoLabel = styled.span`
 `;
 
 const InfoValue = styled.span`
-  color: #e8eaed;
+  color: var(--text-primary);
 `;
 
 const RefreshButton = styled.button`
@@ -114,6 +115,35 @@ interface SystemStats {
   system_uptime: string;
 }
 
+const EMPTY_STATS: SystemStats = {
+  total_users: 0,
+  total_conversations: 0,
+  total_messages: 0,
+  total_tokens_used: 0,
+  active_users_today: 0,
+  active_users_week: 0,
+  messages_today: 0,
+  messages_week: 0,
+  average_tokens_per_message: 0,
+  system_uptime: '0分钟',
+};
+
+const normalizeStats = (value: unknown): SystemStats => {
+  const raw = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+  return {
+    total_users: ensureNumber(raw.total_users),
+    total_conversations: ensureNumber(raw.total_conversations),
+    total_messages: ensureNumber(raw.total_messages),
+    total_tokens_used: ensureNumber(raw.total_tokens_used),
+    active_users_today: ensureNumber(raw.active_users_today),
+    active_users_week: ensureNumber(raw.active_users_week),
+    messages_today: ensureNumber(raw.messages_today),
+    messages_week: ensureNumber(raw.messages_week),
+    average_tokens_per_message: ensureNumber(raw.average_tokens_per_message),
+    system_uptime: typeof raw.system_uptime === 'string' && raw.system_uptime ? raw.system_uptime : EMPTY_STATS.system_uptime,
+  };
+};
+
 const SystemOverview: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -123,7 +153,7 @@ const SystemOverview: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiClient.get('/admin/statistics/overview');
-      setStats(response.data);
+      setStats(normalizeStats(response.data));
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Failed to load statistics:', error);
@@ -164,7 +194,7 @@ const SystemOverview: React.FC = () => {
         {loading ? '刷新中...' : '刷新数据'}
       </RefreshButton>
       {lastUpdated && (
-        <div style={{ color: '#a0aec0', fontSize: '13px', marginBottom: '24px' }}>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>
           最后更新: {lastUpdated.toLocaleString('zh-CN')}
         </div>
       )}
@@ -240,3 +270,4 @@ const SystemOverview: React.FC = () => {
 };
 
 export default SystemOverview;
+

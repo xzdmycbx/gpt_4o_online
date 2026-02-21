@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
+import { ensureArray, ensureNumber } from '../../utils/safe';
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: #1a2332;
+  background: var(--bg-secondary);
   border-radius: 12px;
   overflow: hidden;
 `;
@@ -14,8 +15,8 @@ const Table = styled.table`
 const Th = styled.th`
   padding: 16px;
   text-align: left;
-  background: #0f1419;
-  color: #a0aec0;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
@@ -24,8 +25,8 @@ const Th = styled.th`
 
 const Td = styled.td`
   padding: 16px;
-  border-top: 1px solid #2d3748;
-  color: #e8eaed;
+  border-top: 1px solid var(--border-primary);
+  color: var(--text-primary);
   font-size: 14px;
 `;
 
@@ -63,9 +64,9 @@ const Pagination = styled.div`
 
 const PageButton = styled.button<{ active?: boolean }>`
   padding: 8px 16px;
-  background: ${props => props.active ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#1a2332'};
-  color: ${props => props.active ? 'white' : '#a0aec0'};
-  border: 1px solid ${props => props.active ? 'transparent' : '#2d3748'};
+  background: ${props => props.active ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'var(--bg-secondary)'};
+  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
+  border: 1px solid ${props => props.active ? 'transparent' : 'var(--border-primary)'};
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -111,7 +112,7 @@ const RefreshButton = styled.button`
 `;
 
 const LastUpdated = styled.div`
-  color: #a0aec0;
+  color: var(--text-secondary);
   font-size: 13px;
 `;
 
@@ -143,11 +144,13 @@ const AuditLogs: React.FC = () => {
           offset: (page - 1) * pageSize,
         },
       });
-      setLogs(response.data.logs || []);
-      setTotal(response.data.total || 0);
+      setLogs(ensureArray<AuditLog>(response.data?.logs));
+      setTotal(ensureNumber(response.data?.total));
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Failed to load audit logs:', error);
+      setLogs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -241,3 +244,4 @@ const AuditLogs: React.FC = () => {
 };
 
 export default AuditLogs;
+
