@@ -506,3 +506,82 @@ func (h *AdminHandler) TestEmailConfiguration(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Test email sent successfully"})
 }
+
+// ─── Provider handlers ────────────────────────────────────────────────────────
+
+// ListProviders lists all AI providers
+func (h *AdminHandler) ListProviders(c *gin.Context) {
+	activeOnly := c.DefaultQuery("active_only", "false") == "true"
+
+	providers, err := h.adminService.ListProviders(c.Request.Context(), activeOnly)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if providers == nil {
+		providers = []*model.AIProvider{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"providers": providers})
+}
+
+// CreateProvider creates a new AI provider
+func (h *AdminHandler) CreateProvider(c *gin.Context) {
+	adminUserID := h.getAdminUserID(c)
+	if adminUserID == uuid.Nil {
+		return
+	}
+
+	var req model.AIProviderCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	provider, err := h.adminService.CreateProvider(c.Request.Context(), adminUserID, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, provider)
+}
+
+// UpdateProvider updates an AI provider
+func (h *AdminHandler) UpdateProvider(c *gin.Context) {
+	providerID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		return
+	}
+
+	var req model.AIProviderUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	provider, err := h.adminService.UpdateProvider(c.Request.Context(), providerID, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, provider)
+}
+
+// DeleteProvider deletes an AI provider
+func (h *AdminHandler) DeleteProvider(c *gin.Context) {
+	providerID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider ID"})
+		return
+	}
+
+	if err := h.adminService.DeleteProvider(c.Request.Context(), providerID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Provider deleted successfully"})
+}

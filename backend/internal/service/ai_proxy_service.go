@@ -17,20 +17,46 @@ import (
 
 // AIProxyService handles AI API interactions
 type AIProxyService struct {
-	modelRepo      *repository.AIModelRepository
-	encryptionKey  string
-	httpClient     *http.Client
+	modelRepo    *repository.AIModelRepository
+	providerRepo *repository.AIProviderRepository
+	encryptionKey string
+	httpClient   *http.Client
 }
 
 // NewAIProxyService creates a new AI proxy service
-func NewAIProxyService(modelRepo *repository.AIModelRepository, encryptionKey string) *AIProxyService {
+func NewAIProxyService(modelRepo *repository.AIModelRepository, providerRepo *repository.AIProviderRepository, encryptionKey string) *AIProxyService {
 	return &AIProxyService{
-		modelRepo:     modelRepo,
+		modelRepo:    modelRepo,
+		providerRepo: providerRepo,
 		encryptionKey: encryptionKey,
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
 	}
+}
+
+// resolveCredentials returns the API endpoint and decrypted key for a model,
+// falling back to the linked provider if the model itself has no credentials.
+func (s *AIProxyService) resolveCredentials(ctx context.Context, aiModel *model.AIModel) (endpoint, apiKey string, err error) {
+	if aiModel.ProviderID != nil && (aiModel.APIEndpoint == "" || aiModel.APIKeyEncrypted == "") {
+		// Resolve from provider
+		provider, pErr := s.providerRepo.GetByID(ctx, *aiModel.ProviderID)
+		if pErr != nil {
+			return "", "", fmt.Errorf("failed to get provider: %w", pErr)
+		}
+		decrypted, dErr := crypto.Decrypt(provider.APIKeyEncrypted, s.encryptionKey)
+		if dErr != nil {
+			return "", "", fmt.Errorf("failed to decrypt provider API key: %w", dErr)
+		}
+		return provider.APIEndpoint, decrypted, nil
+	}
+
+	// Use model's own credentials
+	decrypted, dErr := crypto.Decrypt(aiModel.APIKeyEncrypted, s.encryptionKey)
+	if dErr != nil {
+		return "", "", fmt.Errorf("failed to decrypt API key: %w", dErr)
+	}
+	return aiModel.APIEndpoint, decrypted, nil
 }
 
 // SendChatCompletion sends a chat completion request to an AI model
@@ -45,10 +71,9 @@ func (s *AIProxyService) SendChatCompletion(ctx context.Context, modelID uuid.UU
 		return nil, fmt.Errorf("model is not active")
 	}
 
-	// Decrypt API key
-	apiKey, err := crypto.Decrypt(aiModel.APIKeyEncrypted, s.encryptionKey)
+	endpoint, apiKey, err := s.resolveCredentials(ctx, aiModel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt API key: %w", err)
+		return nil, err
 	}
 
 	// Prepare request
@@ -58,7 +83,7 @@ func (s *AIProxyService) SendChatCompletion(ctx context.Context, modelID uuid.UU
 	}
 
 	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", aiModel.APIEndpoint, bytes.NewBuffer(requestBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -105,10 +130,9 @@ func (s *AIProxyService) SendStreamingChatCompletion(ctx context.Context, modelI
 		return nil, fmt.Errorf("model does not support streaming")
 	}
 
-	// Decrypt API key
-	apiKey, err := crypto.Decrypt(aiModel.APIKeyEncrypted, s.encryptionKey)
+	endpoint, apiKey, err := s.resolveCredentials(ctx, aiModel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt API key: %w", err)
+		return nil, err
 	}
 
 	// Ensure streaming is enabled
@@ -121,7 +145,7 @@ func (s *AIProxyService) SendStreamingChatCompletion(ctx context.Context, modelI
 	}
 
 	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", aiModel.APIEndpoint, bytes.NewBuffer(requestBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

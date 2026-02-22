@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/ai-chat/backend/internal/model"
 )
-
 // AIModelRepository handles AI model data access
 type AIModelRepository struct {
 	db *sql.DB
@@ -24,18 +23,20 @@ func NewAIModelRepository(db *sql.DB) *AIModelRepository {
 func (r *AIModelRepository) Create(ctx context.Context, aiModel *model.AIModel) error {
 	query := `
 		INSERT INTO ai_models (
-			id, name, display_name, provider, api_endpoint, api_key_encrypted, model_identifier,
-			supports_streaming, supports_functions, max_tokens,
+			id, name, display_name, provider,
+			api_endpoint, api_key_encrypted, model_identifier,
+			provider_id, supports_streaming, supports_functions, max_tokens,
 			input_price_per_1k, output_price_per_1k,
 			is_active, is_default, description, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		) VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''), $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING created_at, updated_at
 	`
 
 	err := r.db.QueryRowContext(
 		ctx, query,
-		aiModel.ID, aiModel.Name, aiModel.DisplayName, aiModel.Provider, aiModel.APIEndpoint,
-		aiModel.APIKeyEncrypted, aiModel.ModelIdentifier,
+		aiModel.ID, aiModel.Name, aiModel.DisplayName, aiModel.Provider,
+		aiModel.APIEndpoint, aiModel.APIKeyEncrypted, aiModel.ModelIdentifier,
+		aiModel.ProviderID,
 		aiModel.SupportsStreaming, aiModel.SupportsFunctions, aiModel.MaxTokens,
 		aiModel.InputPricePer1k, aiModel.OutputPricePer1k,
 		aiModel.IsActive, aiModel.IsDefault, aiModel.Description, aiModel.CreatedBy,
@@ -51,7 +52,9 @@ func (r *AIModelRepository) Create(ctx context.Context, aiModel *model.AIModel) 
 // GetByID retrieves an AI model by ID
 func (r *AIModelRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.AIModel, error) {
 	query := `
-		SELECT id, name, display_name, provider, api_endpoint, api_key_encrypted, model_identifier,
+		SELECT id, name, display_name, provider,
+			COALESCE(api_endpoint, ''), COALESCE(api_key_encrypted, ''),
+			model_identifier, provider_id,
 			supports_streaming, supports_functions, max_tokens,
 			input_price_per_1k, output_price_per_1k,
 			is_active, is_default, description, created_by, created_at, updated_at
@@ -60,8 +63,9 @@ func (r *AIModelRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.A
 
 	aiModel := &model.AIModel{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&aiModel.ID, &aiModel.Name, &aiModel.DisplayName, &aiModel.Provider, &aiModel.APIEndpoint,
-		&aiModel.APIKeyEncrypted, &aiModel.ModelIdentifier,
+		&aiModel.ID, &aiModel.Name, &aiModel.DisplayName, &aiModel.Provider,
+		&aiModel.APIEndpoint, &aiModel.APIKeyEncrypted,
+		&aiModel.ModelIdentifier, &aiModel.ProviderID,
 		&aiModel.SupportsStreaming, &aiModel.SupportsFunctions, &aiModel.MaxTokens,
 		&aiModel.InputPricePer1k, &aiModel.OutputPricePer1k,
 		&aiModel.IsActive, &aiModel.IsDefault, &aiModel.Description, &aiModel.CreatedBy,
@@ -81,7 +85,9 @@ func (r *AIModelRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.A
 // GetDefault retrieves the default AI model
 func (r *AIModelRepository) GetDefault(ctx context.Context) (*model.AIModel, error) {
 	query := `
-		SELECT id, name, display_name, provider, api_endpoint, api_key_encrypted, model_identifier,
+		SELECT id, name, display_name, provider,
+			COALESCE(api_endpoint, ''), COALESCE(api_key_encrypted, ''),
+			model_identifier, provider_id,
 			supports_streaming, supports_functions, max_tokens,
 			input_price_per_1k, output_price_per_1k,
 			is_active, is_default, description, created_by, created_at, updated_at
@@ -90,8 +96,9 @@ func (r *AIModelRepository) GetDefault(ctx context.Context) (*model.AIModel, err
 
 	aiModel := &model.AIModel{}
 	err := r.db.QueryRowContext(ctx, query).Scan(
-		&aiModel.ID, &aiModel.Name, &aiModel.DisplayName, &aiModel.Provider, &aiModel.APIEndpoint,
-		&aiModel.APIKeyEncrypted, &aiModel.ModelIdentifier,
+		&aiModel.ID, &aiModel.Name, &aiModel.DisplayName, &aiModel.Provider,
+		&aiModel.APIEndpoint, &aiModel.APIKeyEncrypted,
+		&aiModel.ModelIdentifier, &aiModel.ProviderID,
 		&aiModel.SupportsStreaming, &aiModel.SupportsFunctions, &aiModel.MaxTokens,
 		&aiModel.InputPricePer1k, &aiModel.OutputPricePer1k,
 		&aiModel.IsActive, &aiModel.IsDefault, &aiModel.Description, &aiModel.CreatedBy,
@@ -111,7 +118,9 @@ func (r *AIModelRepository) GetDefault(ctx context.Context) (*model.AIModel, err
 // List retrieves all AI models
 func (r *AIModelRepository) List(ctx context.Context, activeOnly bool) ([]*model.AIModel, error) {
 	query := `
-		SELECT id, name, display_name, provider, api_endpoint, api_key_encrypted, model_identifier,
+		SELECT id, name, display_name, provider,
+			COALESCE(api_endpoint, ''), COALESCE(api_key_encrypted, ''),
+			model_identifier, provider_id,
 			supports_streaming, supports_functions, max_tokens,
 			input_price_per_1k, output_price_per_1k,
 			is_active, is_default, description, created_by, created_at, updated_at
@@ -134,8 +143,49 @@ func (r *AIModelRepository) List(ctx context.Context, activeOnly bool) ([]*model
 	for rows.Next() {
 		aiModel := &model.AIModel{}
 		err := rows.Scan(
-			&aiModel.ID, &aiModel.Name, &aiModel.DisplayName, &aiModel.Provider, &aiModel.APIEndpoint,
-			&aiModel.APIKeyEncrypted, &aiModel.ModelIdentifier,
+			&aiModel.ID, &aiModel.Name, &aiModel.DisplayName, &aiModel.Provider,
+			&aiModel.APIEndpoint, &aiModel.APIKeyEncrypted,
+			&aiModel.ModelIdentifier, &aiModel.ProviderID,
+			&aiModel.SupportsStreaming, &aiModel.SupportsFunctions, &aiModel.MaxTokens,
+			&aiModel.InputPricePer1k, &aiModel.OutputPricePer1k,
+			&aiModel.IsActive, &aiModel.IsDefault, &aiModel.Description, &aiModel.CreatedBy,
+			&aiModel.CreatedAt, &aiModel.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan AI model: %w", err)
+		}
+		models = append(models, aiModel)
+	}
+
+	return models, nil
+}
+
+// ListByProvider retrieves all models for a specific provider
+func (r *AIModelRepository) ListByProvider(ctx context.Context, providerID uuid.UUID) ([]*model.AIModel, error) {
+	query := `
+		SELECT id, name, display_name, provider,
+			COALESCE(api_endpoint, ''), COALESCE(api_key_encrypted, ''),
+			model_identifier, provider_id,
+			supports_streaming, supports_functions, max_tokens,
+			input_price_per_1k, output_price_per_1k,
+			is_active, is_default, description, created_by, created_at, updated_at
+		FROM ai_models WHERE provider_id = $1
+		ORDER BY display_name ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, providerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list AI models by provider: %w", err)
+	}
+	defer rows.Close()
+
+	var models []*model.AIModel
+	for rows.Next() {
+		aiModel := &model.AIModel{}
+		err := rows.Scan(
+			&aiModel.ID, &aiModel.Name, &aiModel.DisplayName, &aiModel.Provider,
+			&aiModel.APIEndpoint, &aiModel.APIKeyEncrypted,
+			&aiModel.ModelIdentifier, &aiModel.ProviderID,
 			&aiModel.SupportsStreaming, &aiModel.SupportsFunctions, &aiModel.MaxTokens,
 			&aiModel.InputPricePer1k, &aiModel.OutputPricePer1k,
 			&aiModel.IsActive, &aiModel.IsDefault, &aiModel.Description, &aiModel.CreatedBy,
@@ -155,21 +205,23 @@ func (r *AIModelRepository) Update(ctx context.Context, aiModel *model.AIModel) 
 	query := `
 		UPDATE ai_models SET
 			display_name = $2,
-			api_endpoint = $3,
-			api_key_encrypted = $4,
-			supports_streaming = $5,
-			supports_functions = $6,
-			max_tokens = $7,
-			input_price_per_1k = $8,
-			output_price_per_1k = $9,
-			is_active = $10,
-			description = $11
+			api_endpoint = NULLIF($3, ''),
+			api_key_encrypted = NULLIF($4, ''),
+			provider_id = $5,
+			supports_streaming = $6,
+			supports_functions = $7,
+			max_tokens = $8,
+			input_price_per_1k = $9,
+			output_price_per_1k = $10,
+			is_active = $11,
+			description = $12
 		WHERE id = $1
 	`
 
 	_, err := r.db.ExecContext(
 		ctx, query,
 		aiModel.ID, aiModel.DisplayName, aiModel.APIEndpoint, aiModel.APIKeyEncrypted,
+		aiModel.ProviderID,
 		aiModel.SupportsStreaming, aiModel.SupportsFunctions, aiModel.MaxTokens,
 		aiModel.InputPricePer1k, aiModel.OutputPricePer1k,
 		aiModel.IsActive, aiModel.Description,

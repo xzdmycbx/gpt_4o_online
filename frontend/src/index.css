@@ -13,6 +13,11 @@
   --text-primary: #e8eaed;
   --text-secondary: #9aa0a6;
   --text-muted: #5f6368;
+  /* Glass variables (dark theme) */
+  --glass-bg: rgba(26, 35, 50, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 12px;
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 html[data-theme='light'] {
@@ -24,6 +29,11 @@ html[data-theme='light'] {
   --text-primary: #1f2937;
   --text-secondary: #4b5563;
   --text-muted: #6b7280;
+  /* Glass variables (light theme) */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-blur: 12px;
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 body {

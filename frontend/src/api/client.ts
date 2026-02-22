@@ -360,6 +360,29 @@ class APIClient {
       return response.data;
     },
   };
+
+  // Provider endpoints (admin)
+  providers = {
+    list: async (activeOnly = false) => {
+      const response = await this.client.get('/admin/providers', { params: { active_only: activeOnly } });
+      return response.data;
+    },
+
+    create: async (provider: any) => {
+      const response = await this.client.post('/admin/providers', provider);
+      return response.data;
+    },
+
+    update: async (id: string, updates: any) => {
+      const response = await this.client.put(`/admin/providers/${id}`, updates);
+      return response.data;
+    },
+
+    delete: async (id: string) => {
+      const response = await this.client.delete(`/admin/providers/${id}`);
+      return response.data;
+    },
+  };
 }
 
 export const api = new APIClient();

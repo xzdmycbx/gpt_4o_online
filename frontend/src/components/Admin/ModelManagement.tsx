@@ -2,144 +2,290 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
 import { ensureArray } from '../../utils/safe';
+import { GlassCard, GlassModal } from '../../styles/glass';
 
-const Card = styled.div`
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-  border: 1px solid var(--border-primary);
-`;
+// ─── Styled components ────────────────────────────────────────────────────────
 
-const CardHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+const ProviderCard = styled(GlassCard)`
   margin-bottom: 16px;
+  overflow: hidden;
 `;
 
-const ModelName = styled.h3`
-  margin: 0;
-  font-size: 18px;
-  color: var(--text-primary);
-`;
-
-const Badge = styled.span<{ isDefault?: boolean }>`
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${props => props.isDefault ? 'rgba(72, 187, 120, 0.2)' : 'rgba(102, 126, 234, 0.2)'};
-  color: ${props => props.isDefault ? '#48bb78' : '#667eea'};
-`;
-
-const Info = styled.div`
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin-bottom: 8px;
-`;
-
-const ButtonGroup = styled.div`
+const ProviderHeader = styled.div`
   display: flex;
+  align-items: center;
   gap: 12px;
-  margin-top: 16px;
-`;
-
-const Button = styled.button<{ variant?: 'primary' | 'danger' | 'secondary' }>`
-  padding: 8px 16px;
-  background: ${props => {
-    if (props.variant === 'danger') return '#fc8181';
-    if (props.variant === 'secondary') return '#4a5568';
-    return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-  }};
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 18px 20px;
   cursor: pointer;
-  transition: all 0.2s;
+  user-select: none;
 
   &:hover {
-    transform: translateY(-1px);
-    opacity: 0.9;
+    background: rgba(102, 126, 234, 0.04);
   }
 `;
 
-const AddButton = styled(Button)`
-  margin-bottom: 24px;
+const ProviderName = styled.span`
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
 `;
 
-const Modal = styled.div`
+const ProviderEndpoint = styled.span`
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const Badge = styled.span<{ color?: string }>`
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: ${p => p.color ? `rgba(${p.color}, 0.15)` : 'rgba(102,126,234,0.15)'};
+  color: ${p => p.color ? `rgb(${p.color})` : '#667eea'};
+  flex-shrink: 0;
+`;
+
+const ChevronIcon = styled.span<{ open: boolean }>`
+  font-size: 12px;
+  color: var(--text-muted);
+  transform: rotate(${p => p.open ? '180deg' : '0deg'});
+  transition: transform 0.2s;
+  flex-shrink: 0;
+`;
+
+const ProviderActions = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+`;
+
+const IconBtn = styled.button<{ danger?: boolean }>`
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid ${p => p.danger ? 'rgba(255,69,58,0.3)' : 'var(--border-primary)'};
+  background: transparent;
+  color: ${p => p.danger ? '#ff453a' : 'var(--text-secondary)'};
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+
+  &:hover {
+    background: ${p => p.danger ? 'rgba(255,69,58,0.1)' : 'rgba(102,126,234,0.08)'};
+    color: ${p => p.danger ? '#ff453a' : '#667eea'};
+    border-color: ${p => p.danger ? '#ff453a' : '#667eea'};
+  }
+`;
+
+const ProviderBody = styled.div`
+  border-top: 1px solid var(--glass-border);
+  padding: 12px 20px 16px;
+`;
+
+const ModelRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  margin-bottom: 8px;
+  background: rgba(255,255,255,0.03);
+  transition: border-color 0.18s;
+
+  &:hover { border-color: rgba(102,126,234,0.3); }
+`;
+
+const ModelName = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+`;
+
+const ModelMeta = styled.span`
+  font-size: 12px;
+  color: var(--text-muted);
+`;
+
+const AddModelBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--border-primary);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.18s;
+
+  &:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: rgba(102,126,234,0.06);
+  }
+`;
+
+const TopBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const AddProviderBtn = styled.button`
+  padding: 9px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+
+  &:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+`;
+
+const Backdrop = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  padding: 20px;
 `;
 
-const ModalContent = styled.div`
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 32px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
+const ModalContent = styled(GlassModal)`
+  padding: 28px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
   overflow-y: auto;
-  border: 1px solid var(--border-primary);
 `;
 
 const ModalTitle = styled.h3`
-  margin: 0 0 24px 0;
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 20px;
   color: var(--text-primary);
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 `;
 
 const Label = styled.label`
   display: block;
-  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-secondary);
-  font-size: 14px;
+  margin-bottom: 6px;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 12px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  border: 1.5px solid var(--border-primary);
+  border-radius: 10px;
   color: var(--text-primary);
   font-size: 14px;
+  transition: border-color 0.18s;
+  box-sizing: border-box;
 
-  &:focus {
-    outline: none;
-    border-color: #667eea;
-  }
+  &:focus { outline: none; border-color: #667eea; }
+  &::placeholder { color: var(--text-muted); }
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 12px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  border: 1.5px solid var(--border-primary);
+  border-radius: 10px;
   color: var(--text-primary);
   font-size: 14px;
 
-  &:focus {
-    outline: none;
-    border-color: #667eea;
-  }
+  &:focus { outline: none; border-color: #667eea; }
+  option { background: var(--bg-primary); }
 `;
+
+const ModalActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+`;
+
+const CancelBtn = styled.button`
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  &:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+`;
+
+const SaveBtn = styled.button`
+  padding: 10px 24px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover { opacity: 0.9; box-shadow: 0 4px 14px rgba(102,126,234,0.3); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const ErrorMsg = styled.div`
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(252,129,129,0.1);
+  border: 1px solid rgba(252,129,129,0.3);
+  color: #fc8181;
+  font-size: 13px;
+`;
+
+const EmptyModels = styled.div`
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 8px 0;
+  text-align: center;
+`;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Provider {
+  id: string;
+  name: string;
+  display_name: string;
+  provider_type: string;
+  api_endpoint: string;
+  is_active: boolean;
+  description: string;
+  model_count: number;
+}
 
 interface Model {
   id: string;
@@ -150,204 +296,413 @@ interface Model {
   model_identifier: string;
   max_tokens: number;
   is_default: boolean;
+  provider_id?: string;
 }
 
+type ModalKind =
+  | { type: 'addProvider' }
+  | { type: 'editProvider'; provider: Provider }
+  | { type: 'addModel'; provider: Provider }
+  | { type: 'editModel'; model: Model };
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const ModelManagement: React.FC = () => {
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [models, setModels] = useState<Model[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [editingModel, setEditingModel] = useState<Model | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [modal, setModal] = useState<ModalKind | null>(null);
   const [saveError, setSaveError] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    display_name: '',
-    provider: 'openai',
-    api_endpoint: '',
-    api_key: '',
-    model_identifier: '',
-    max_tokens: 4096,
+  const [saving, setSaving] = useState(false);
+
+  // Provider form
+  const [providerForm, setProviderForm] = useState({
+    name: '', display_name: '', provider_type: 'openai', api_endpoint: '', api_key: '', description: '',
+  });
+
+  // Model form
+  const [modelForm, setModelForm] = useState({
+    name: '', display_name: '', model_identifier: '', provider: 'openai',
+    api_endpoint: '', api_key: '', max_tokens: 4096,
+    supports_streaming: true, provider_id: '',
   });
 
   useEffect(() => {
-    loadModels();
+    loadAll();
   }, []);
 
-  const loadModels = async () => {
+  const loadAll = async () => {
     try {
-      const response = await apiClient.get('/admin/models');
-      setModels(ensureArray<Model>(response.data?.models));
-    } catch (error) {
-      console.error('Failed to load models:', error);
-      setModels([]);
+      const [pRes, mRes] = await Promise.all([
+        apiClient.get('/admin/providers'),
+        apiClient.get('/admin/models'),
+      ]);
+      setProviders(ensureArray<Provider>(pRes.data?.providers));
+      setModels(ensureArray<Model>(mRes.data?.models));
+    } catch (e) {
+      console.error('Failed to load data:', e);
     }
   };
 
-  const handleAdd = () => {
-    setEditingModel(null);
+  const modelsForProvider = (providerID: string) =>
+    models.filter(m => m.provider_id === providerID);
+
+  const standaloneModels = models.filter(m => !m.provider_id);
+
+  const toggleExpand = (id: string) =>
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // ── Provider actions ──
+
+  const openAddProvider = () => {
+    setProviderForm({ name: '', display_name: '', provider_type: 'openai', api_endpoint: '', api_key: '', description: '' });
     setSaveError('');
-    setFormData({
-      name: '',
-      display_name: '',
-      provider: 'openai',
-      api_endpoint: 'https://api.openai.com/v1/chat/completions',
-      api_key: '',
-      model_identifier: 'gpt-4',
-      max_tokens: 4096,
-    });
-    setShowModal(true);
+    setModal({ type: 'addProvider' });
   };
 
-  const handleEdit = (model: Model) => {
-    setEditingModel(model);
+  const openEditProvider = (p: Provider) => {
+    setProviderForm({ name: p.name, display_name: p.display_name, provider_type: p.provider_type, api_endpoint: p.api_endpoint, api_key: '', description: p.description });
     setSaveError('');
-    setFormData({
-      name: model.name,
-      display_name: model.display_name || '',
-      provider: model.provider,
-      api_endpoint: model.api_endpoint,
-      api_key: '', // API key never returned from server; user must re-enter to change
-      model_identifier: model.model_identifier,
-      max_tokens: model.max_tokens,
-    });
-    setShowModal(true);
+    setModal({ type: 'editProvider', provider: p });
   };
 
-  const handleSave = async () => {
+  const saveProvider = async () => {
+    setSaving(true);
     setSaveError('');
     try {
-      if (editingModel) {
-        await apiClient.put(`/admin/models/${editingModel.id}`, formData);
+      if (modal?.type === 'editProvider') {
+        await apiClient.put(`/admin/providers/${modal.provider.id}`, {
+          display_name: providerForm.display_name,
+          provider_type: providerForm.provider_type,
+          api_endpoint: providerForm.api_endpoint,
+          api_key: providerForm.api_key || undefined,
+          description: providerForm.description,
+        });
       } else {
-        await apiClient.post('/admin/models', formData);
+        await apiClient.post('/admin/providers', providerForm);
       }
-      await loadModels();
-      setShowModal(false);
-    } catch (error: any) {
-      setSaveError(error?.response?.data?.error || '保存失败，请重试');
+      setModal(null);
+      await loadAll();
+    } catch (e: any) {
+      setSaveError(e?.response?.data?.error || '保存失败，请重试');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个模型吗？')) return;
+  const deleteProvider = async (id: string) => {
+    if (!confirm('确定删除此供应商？关联模型将解除绑定后才能删除。')) return;
+    try {
+      await apiClient.delete(`/admin/providers/${id}`);
+      await loadAll();
+    } catch (e: any) {
+      alert(e?.response?.data?.error || '删除失败');
+    }
+  };
+
+  // ── Model actions ──
+
+  const openAddModel = (provider: Provider) => {
+    setModelForm({
+      name: '', display_name: '', model_identifier: '', provider: provider.provider_type,
+      api_endpoint: '', api_key: '', max_tokens: 4096, supports_streaming: true,
+      provider_id: provider.id,
+    });
+    setSaveError('');
+    setModal({ type: 'addModel', provider });
+  };
+
+  const openEditModel = (m: Model) => {
+    setModelForm({
+      name: m.name, display_name: m.display_name || '', model_identifier: m.model_identifier,
+      provider: m.provider, api_endpoint: m.api_endpoint || '', api_key: '',
+      max_tokens: m.max_tokens, supports_streaming: true,
+      provider_id: m.provider_id || '',
+    });
+    setSaveError('');
+    setModal({ type: 'editModel', model: m });
+  };
+
+  const saveModel = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      if (modal?.type === 'editModel') {
+        await apiClient.put(`/admin/models/${modal.model.id}`, {
+          display_name: modelForm.display_name,
+          max_tokens: modelForm.max_tokens,
+          api_endpoint: modelForm.api_endpoint || undefined,
+          api_key: modelForm.api_key || undefined,
+          supports_streaming: modelForm.supports_streaming,
+        });
+      } else {
+        await apiClient.post('/admin/models', {
+          name: modelForm.name,
+          display_name: modelForm.display_name,
+          model_identifier: modelForm.model_identifier,
+          provider: modelForm.provider,
+          provider_id: modelForm.provider_id || undefined,
+          api_endpoint: modelForm.api_endpoint || undefined,
+          api_key: modelForm.api_key || undefined,
+          max_tokens: modelForm.max_tokens,
+          supports_streaming: modelForm.supports_streaming,
+        });
+      }
+      setModal(null);
+      await loadAll();
+    } catch (e: any) {
+      setSaveError(e?.response?.data?.error || '保存失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteModel = async (id: string) => {
+    if (!confirm('确定删除这个模型吗？')) return;
     try {
       await apiClient.delete(`/admin/models/${id}`);
-      await loadModels();
-    } catch (error) {
-      console.error('Failed to delete model:', error);
+      await loadAll();
+    } catch (e) {
+      console.error('Failed to delete model:', e);
     }
   };
 
-  const handleSetDefault = async (id: string) => {
+  const setDefaultModel = async (id: string) => {
     try {
       await apiClient.put(`/admin/models/${id}/default`);
-      await loadModels();
-    } catch (error) {
-      console.error('Failed to set default:', error);
+      await loadAll();
+    } catch (e) {
+      console.error('Failed to set default:', e);
     }
+  };
+
+  // ── Modal form ──
+
+  const renderModal = () => {
+    if (!modal) return null;
+    const isProviderModal = modal.type === 'addProvider' || modal.type === 'editProvider';
+    const isModelModal = modal.type === 'addModel' || modal.type === 'editModel';
+
+    return (
+      <Backdrop onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
+        <ModalContent>
+          <ModalTitle>
+            {modal.type === 'addProvider' && '添加供应商'}
+            {modal.type === 'editProvider' && '编辑供应商'}
+            {modal.type === 'addModel' && `在「${(modal as any).provider.display_name}」下添加模型`}
+            {modal.type === 'editModel' && '编辑模型'}
+          </ModalTitle>
+
+          {saveError && <ErrorMsg>{saveError}</ErrorMsg>}
+
+          {isProviderModal && (
+            <>
+              {modal.type === 'addProvider' && (
+                <FormGroup>
+                  <Label>供应商标识（唯一，英文）</Label>
+                  <Input
+                    value={providerForm.name}
+                    onChange={e => setProviderForm({ ...providerForm, name: e.target.value })}
+                    placeholder="如: my-openai"
+                  />
+                </FormGroup>
+              )}
+              <FormGroup>
+                <Label>显示名称</Label>
+                <Input
+                  value={providerForm.display_name}
+                  onChange={e => setProviderForm({ ...providerForm, display_name: e.target.value })}
+                  placeholder="如: My OpenAI"
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>供应商类型</Label>
+                <Select
+                  value={providerForm.provider_type}
+                  onChange={e => setProviderForm({ ...providerForm, provider_type: e.target.value })}
+                >
+                  <option value="openai">OpenAI 兼容</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="custom">自定义</option>
+                </Select>
+              </FormGroup>
+              <FormGroup>
+                <Label>API Endpoint</Label>
+                <Input
+                  value={providerForm.api_endpoint}
+                  onChange={e => setProviderForm({ ...providerForm, api_endpoint: e.target.value })}
+                  placeholder="https://api.openai.com/v1/chat/completions"
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>API Key{modal.type === 'editProvider' && ' (留空不修改)'}</Label>
+                <Input
+                  type="password"
+                  value={providerForm.api_key}
+                  onChange={e => setProviderForm({ ...providerForm, api_key: e.target.value })}
+                  placeholder="sk-..."
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>描述（可选）</Label>
+                <Input
+                  value={providerForm.description}
+                  onChange={e => setProviderForm({ ...providerForm, description: e.target.value })}
+                  placeholder=""
+                />
+              </FormGroup>
+            </>
+          )}
+
+          {isModelModal && (
+            <>
+              {modal.type === 'addModel' && (
+                <>
+                  <FormGroup>
+                    <Label>模型名称（唯一）</Label>
+                    <Input
+                      value={modelForm.name}
+                      onChange={e => setModelForm({ ...modelForm, name: e.target.value })}
+                      placeholder="如: gpt-4o-mini"
+                    />
+                  </FormGroup>
+                  <FormGroup>
+                    <Label>模型标识符</Label>
+                    <Input
+                      value={modelForm.model_identifier}
+                      onChange={e => setModelForm({ ...modelForm, model_identifier: e.target.value })}
+                      placeholder="如: gpt-4o-mini"
+                    />
+                  </FormGroup>
+                </>
+              )}
+              <FormGroup>
+                <Label>显示名称</Label>
+                <Input
+                  value={modelForm.display_name}
+                  onChange={e => setModelForm({ ...modelForm, display_name: e.target.value })}
+                  placeholder="如: GPT-4o Mini"
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>最大 Tokens</Label>
+                <Input
+                  type="number"
+                  value={modelForm.max_tokens}
+                  onChange={e => setModelForm({ ...modelForm, max_tokens: parseInt(e.target.value) || 4096 })}
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>API 端点（覆盖供应商，可选）</Label>
+                <Input
+                  value={modelForm.api_endpoint}
+                  onChange={e => setModelForm({ ...modelForm, api_endpoint: e.target.value })}
+                  placeholder="留空使用供应商配置"
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>API Key（覆盖供应商，可选）</Label>
+                <Input
+                  type="password"
+                  value={modelForm.api_key}
+                  onChange={e => setModelForm({ ...modelForm, api_key: e.target.value })}
+                  placeholder="留空使用供应商配置"
+                />
+              </FormGroup>
+            </>
+          )}
+
+          <ModalActions>
+            <CancelBtn onClick={() => setModal(null)}>取消</CancelBtn>
+            <SaveBtn onClick={isProviderModal ? saveProvider : saveModel} disabled={saving}>
+              {saving ? '保存中…' : '保存'}
+            </SaveBtn>
+          </ModalActions>
+        </ModalContent>
+      </Backdrop>
+    );
   };
 
   return (
     <div>
-      <AddButton onClick={handleAdd}>添加新模型</AddButton>
+      <TopBar>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          {providers.length} 个供应商 · {models.length} 个模型
+        </span>
+        <AddProviderBtn onClick={openAddProvider}>
+          + 添加供应商
+        </AddProviderBtn>
+      </TopBar>
 
-      {models.map(model => (
-        <Card key={model.id}>
-          <CardHeader>
-            <ModelName>{model.name}</ModelName>
-            {model.is_default && <Badge isDefault>默认</Badge>}
-          </CardHeader>
-          <Info><strong>提供商:</strong> {model.provider}</Info>
-          <Info><strong>模型标识:</strong> {model.model_identifier}</Info>
-          <Info><strong>API端点:</strong> {model.api_endpoint}</Info>
-          <Info><strong>最大Tokens:</strong> {model.max_tokens}</Info>
-          <ButtonGroup>
-            <Button onClick={() => handleEdit(model)}>编辑</Button>
-            {!model.is_default && (
-              <Button onClick={() => handleSetDefault(model.id)}>设为默认</Button>
-            )}
-            <Button variant="danger" onClick={() => handleDelete(model.id)}>删除</Button>
-          </ButtonGroup>
-        </Card>
-      ))}
+      {/* Provider cards */}
+      {providers.map(p => {
+        const pModels = modelsForProvider(p.id);
+        const isOpen = !!expanded[p.id];
+        return (
+          <ProviderCard key={p.id}>
+            <ProviderHeader onClick={() => toggleExpand(p.id)}>
+              <ProviderName>{p.display_name}</ProviderName>
+              <ProviderEndpoint title={p.api_endpoint}>{p.api_endpoint}</ProviderEndpoint>
+              <Badge>{pModels.length} 个模型</Badge>
+              <ProviderActions onClick={e => e.stopPropagation()}>
+                <IconBtn onClick={() => openEditProvider(p)}>编辑</IconBtn>
+                <IconBtn danger onClick={() => deleteProvider(p.id)}>删除</IconBtn>
+              </ProviderActions>
+              <ChevronIcon open={isOpen}>▼</ChevronIcon>
+            </ProviderHeader>
 
-      {showModal && (
-        <Modal onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <ModalContent>
-            <ModalTitle>{editingModel ? '编辑模型' : '添加新模型'}</ModalTitle>
-            {saveError && (
-              <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(252,129,129,0.1)', border: '1px solid rgba(252,129,129,0.3)', color: '#fc8181', fontSize: 13 }}>
-                {saveError}
-              </div>
+            {isOpen && (
+              <ProviderBody>
+                {pModels.length === 0 && (
+                  <EmptyModels>此供应商下还没有模型</EmptyModels>
+                )}
+                {pModels.map(m => (
+                  <ModelRow key={m.id}>
+                    <ModelName>{m.display_name || m.name}</ModelName>
+                    <ModelMeta>{m.model_identifier}</ModelMeta>
+                    {m.is_default && <Badge color="52,199,89">默认</Badge>}
+                    <IconBtn onClick={() => openEditModel(m)}>编辑</IconBtn>
+                    {!m.is_default && <IconBtn onClick={() => setDefaultModel(m.id)}>设为默认</IconBtn>}
+                    <IconBtn danger onClick={() => deleteModel(m.id)}>删除</IconBtn>
+                  </ModelRow>
+                ))}
+                <AddModelBtn onClick={() => openAddModel(p)}>
+                  + 添加模型
+                </AddModelBtn>
+              </ProviderBody>
             )}
-            <FormGroup>
-              <Label>模型名称</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="例如: gpt-4"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>显示名称</Label>
-              <Input
-                value={formData.display_name}
-                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                placeholder="例如: GPT-4"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>提供商</Label>
-              <Select
-                value={formData.provider}
-                onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-              >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="custom">自定义</option>
-              </Select>
-            </FormGroup>
-            <FormGroup>
-              <Label>API 端点</Label>
-              <Input
-                value={formData.api_endpoint}
-                onChange={(e) => setFormData({ ...formData, api_endpoint: e.target.value })}
-                placeholder="https://api.openai.com/v1/chat/completions"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>API 密钥</Label>
-              <Input
-                type="password"
-                value={formData.api_key}
-                onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                placeholder="sk-..."
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>模型标识符</Label>
-              <Input
-                value={formData.model_identifier}
-                onChange={(e) => setFormData({ ...formData, model_identifier: e.target.value })}
-                placeholder="gpt-4"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>最大 Tokens</Label>
-              <Input
-                type="number"
-                value={formData.max_tokens}
-                onChange={(e) => setFormData({ ...formData, max_tokens: parseInt(e.target.value) || 4096 })}
-              />
-            </FormGroup>
-            <ButtonGroup>
-              <Button onClick={handleSave}>保存</Button>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-            </ButtonGroup>
-          </ModalContent>
-        </Modal>
+          </ProviderCard>
+        );
+      })}
+
+      {/* Standalone models (no provider) */}
+      {standaloneModels.length > 0 && (
+        <ProviderCard>
+          <ProviderHeader onClick={() => toggleExpand('__standalone')}>
+            <ProviderName>独立模型（未绑定供应商）</ProviderName>
+            <Badge>{standaloneModels.length} 个模型</Badge>
+            <ChevronIcon open={!!expanded['__standalone']}>▼</ChevronIcon>
+          </ProviderHeader>
+          {!!expanded['__standalone'] && (
+            <ProviderBody>
+              {standaloneModels.map(m => (
+                <ModelRow key={m.id}>
+                  <ModelName>{m.display_name || m.name}</ModelName>
+                  <ModelMeta>{m.model_identifier}</ModelMeta>
+                  {m.is_default && <Badge color="52,199,89">默认</Badge>}
+                  <IconBtn onClick={() => openEditModel(m)}>编辑</IconBtn>
+                  {!m.is_default && <IconBtn onClick={() => setDefaultModel(m.id)}>设为默认</IconBtn>}
+                  <IconBtn danger onClick={() => deleteModel(m.id)}>删除</IconBtn>
+                </ModelRow>
+              ))}
+            </ProviderBody>
+          )}
+        </ProviderCard>
       )}
+
+      {renderModal()}
     </div>
   );
 };
 
 export default ModelManagement;
-

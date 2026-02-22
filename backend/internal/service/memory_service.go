@@ -5,11 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/ai-chat/backend/internal/model"
 	"github.com/ai-chat/backend/internal/repository"
 )
+
+const memoryCharBudget = 1200
+
+type memoryCacheEntry struct {
+	context   string
+	expiresAt time.Time
+}
 
 // MemoryService handles memory extraction and management
 type MemoryService struct {
@@ -19,6 +28,8 @@ type MemoryService struct {
 	modelRepo      *repository.AIModelRepository
 	enabled        bool
 	defaultModel   string
+	cache          sync.Map      // key: uuid.UUID string → *memoryCacheEntry
+	cacheTTL       time.Duration // 5 minutes
 }
 
 // NewMemoryService creates a new memory service
@@ -37,6 +48,7 @@ func NewMemoryService(
 		modelRepo:      modelRepo,
 		enabled:        enabled,
 		defaultModel:   defaultModel,
+		cacheTTL:       5 * time.Minute,
 	}
 }
 
@@ -101,6 +113,9 @@ func (s *MemoryService) ExtractMemoriesFromConversation(ctx context.Context, use
 		}
 	}
 
+	// Invalidate cache for this user so next BuildMemoryContext reloads
+	s.cache.Delete(userID.String())
+
 	return nil
 }
 
@@ -123,12 +138,13 @@ func (s *MemoryService) buildConversationText(messages []*model.Message) string 
 
 // extractMemoriesWithAI uses AI to extract memories from conversation
 func (s *MemoryService) extractMemoriesWithAI(ctx context.Context, conversationText string) ([]model.MemoryExtractionResult, error) {
-	// Construct prompt for memory extraction (under 100 tokens)
-	prompt := fmt.Sprintf(`根据对话提取用户信息，生成简洁记忆（每条≤50字）。
-分类：preference/fact/context
-返回JSON：[{"content":"记忆","category":"类别","importance":1-10}]
-对话：
-%s`, conversationText)
+	// Optimized prompt — minimal, targeted, anti-hallucination
+	prompt := fmt.Sprintf(`对话内容：
+%s
+
+提取用户明确说明的信息（每条≤40字），输出JSON数组：
+[{"content":"内容","category":"preference|fact|context","importance":1-10}]
+无信息时返回空数组[]`, conversationText)
 
 	// Get memory extraction model
 	var modelID uuid.UUID
@@ -151,13 +167,13 @@ func (s *MemoryService) extractMemoriesWithAI(ctx context.Context, conversationT
 		modelIdentifier = models[0].ModelIdentifier
 	}
 
-	// Prepare chat request — use the model's actual ModelIdentifier, not the config string
+	// Prepare chat request
 	request := &model.ChatCompletionRequest{
 		Model: modelIdentifier,
 		Messages: []model.ChatMessage{
 			{
 				Role:    "system",
-				Content: "你是一个记忆提取专家，从对话中提取重要的用户信息。只返回JSON格式的数组，不要其他内容。",
+				Content: "只提取对话中用户明确说明的信息，不推断，不补充，不虚构。返回JSON数组。",
 			},
 			{
 				Role:    "user",
@@ -165,7 +181,7 @@ func (s *MemoryService) extractMemoriesWithAI(ctx context.Context, conversationT
 			},
 		},
 		Temperature: func() *float64 { t := 0.3; return &t }(),
-		MaxTokens:   func() *int { t := 500; return &t }(),
+		MaxTokens:   func() *int { t := 400; return &t }(),
 	}
 
 	// Send request to AI
@@ -211,7 +227,6 @@ func (s *MemoryService) isSimilar(a, b string) bool {
 		return true
 	}
 
-	// Could implement more sophisticated similarity check (Levenshtein, etc.)
 	return false
 }
 
@@ -283,7 +298,7 @@ func (s *MemoryService) UpdateMemory(ctx context.Context, userID, memoryID uuid.
 	return memory, nil
 }
 
-// DeleteMemory deletes a memory
+// DeleteMemory deletes a memory and invalidates the user's cache
 func (s *MemoryService) DeleteMemory(ctx context.Context, userID, memoryID uuid.UUID) error {
 	// Get existing memory
 	memory, err := s.memoryRepo.GetByID(ctx, memoryID)
@@ -296,7 +311,13 @@ func (s *MemoryService) DeleteMemory(ctx context.Context, userID, memoryID uuid.
 		return fmt.Errorf("unauthorized")
 	}
 
-	return s.memoryRepo.Delete(ctx, memoryID)
+	if err := s.memoryRepo.Delete(ctx, memoryID); err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	s.cache.Delete(userID.String())
+	return nil
 }
 
 // CleanupOldMemories removes old low-importance memories
@@ -305,9 +326,37 @@ func (s *MemoryService) CleanupOldMemories(ctx context.Context, userID uuid.UUID
 	return s.memoryRepo.DeleteLowImportance(ctx, userID, 30, 3)
 }
 
-// BuildMemoryContext builds a context string from relevant memories
+// buildBudgetedContext builds memory context within ~1200 character budget
+func (s *MemoryService) buildBudgetedContext(memories []*model.Memory) string {
+	var builder strings.Builder
+	total := 0
+
+	for _, mem := range memories {
+		line := fmt.Sprintf("- [%s] %s\n", mem.Category, mem.Content)
+		if total+len(line) > memoryCharBudget {
+			break
+		}
+		builder.WriteString(line)
+		total += len(line)
+	}
+
+	return builder.String()
+}
+
+// BuildMemoryContext builds a context string from relevant memories (with cache)
 func (s *MemoryService) BuildMemoryContext(ctx context.Context, userID uuid.UUID) (string, error) {
-	memories, err := s.GetRelevantMemories(ctx, userID, 10)
+	// Check cache
+	cacheKey := userID.String()
+	if v, ok := s.cache.Load(cacheKey); ok {
+		entry := v.(*memoryCacheEntry)
+		if time.Now().Before(entry.expiresAt) {
+			return entry.context, nil
+		}
+		s.cache.Delete(cacheKey)
+	}
+
+	// Fetch memories (limit 20, budget will trim)
+	memories, err := s.GetRelevantMemories(ctx, userID, 20)
 	if err != nil {
 		return "", err
 	}
@@ -316,12 +365,18 @@ func (s *MemoryService) BuildMemoryContext(ctx context.Context, userID uuid.UUID
 		return "", nil
 	}
 
-	var builder strings.Builder
-	builder.WriteString("关于用户的记忆：\n")
-
-	for _, mem := range memories {
-		builder.WriteString(fmt.Sprintf("- %s\n", mem.Content))
+	body := s.buildBudgetedContext(memories)
+	if body == "" {
+		return "", nil
 	}
 
-	return builder.String(), nil
+	result := "关于用户的记忆：\n" + body
+
+	// Store in cache
+	s.cache.Store(cacheKey, &memoryCacheEntry{
+		context:   result,
+		expiresAt: time.Now().Add(s.cacheTTL),
+	})
+
+	return result, nil
 }

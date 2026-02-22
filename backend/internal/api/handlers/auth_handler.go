@@ -13,17 +13,19 @@ import (
 
 // AuthHandler handles authentication endpoints
 type AuthHandler struct {
-	authService  *service.AuthService
-	emailService *service.EmailService
-	frontendURL  string
+	authService           *service.AuthService
+	emailService          *service.EmailService
+	systemSettingsService *service.SystemSettingsService
+	frontendURL           string
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(authService *service.AuthService, emailService *service.EmailService, frontendURL string) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, emailService *service.EmailService, systemSettingsService *service.SystemSettingsService, frontendURL string) *AuthHandler {
 	return &AuthHandler{
-		authService:  authService,
-		emailService: emailService,
-		frontendURL:  frontendURL,
+		authService:           authService,
+		emailService:          emailService,
+		systemSettingsService: systemSettingsService,
+		frontendURL:           frontendURL,
 	}
 }
 
@@ -318,4 +320,36 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",
 	})
+}
+
+// GetEnabledOAuth2Providers returns the list of enabled OAuth2 providers (public endpoint)
+func (h *AuthHandler) GetEnabledOAuth2Providers(c *gin.Context) {
+	if h.systemSettingsService == nil {
+		c.JSON(http.StatusOK, gin.H{"providers": []interface{}{}})
+		return
+	}
+
+	settings, err := h.systemSettingsService.GetSettings(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"providers": []interface{}{}})
+		return
+	}
+
+	type ProviderInfo struct {
+		Name        string `json:"name"`
+		DisplayName string `json:"display_name"`
+		AuthURL     string `json:"auth_url"`
+	}
+
+	providers := []ProviderInfo{}
+
+	if settings.OAuth2TwitterEnabled && settings.OAuth2TwitterClientID != "" {
+		providers = append(providers, ProviderInfo{
+			Name:        "twitter",
+			DisplayName: "X (Twitter)",
+			AuthURL:     "/api/v1/auth/oauth2/twitter",
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"providers": providers})
 }

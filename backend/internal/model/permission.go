@@ -60,13 +60,14 @@ func HasPermission(role UserRole, perm Permission) bool {
 
 // AIModel represents an AI model configuration
 type AIModel struct {
-	ID               uuid.UUID `json:"id" db:"id"`
-	Name             string    `json:"name" db:"name"`
-	DisplayName      string    `json:"display_name" db:"display_name"`
-	Provider         string    `json:"provider" db:"provider"`
-	APIEndpoint      string    `json:"api_endpoint" db:"api_endpoint"`
-	APIKeyEncrypted  string    `json:"-" db:"api_key_encrypted"`
-	ModelIdentifier  string    `json:"model_identifier" db:"model_identifier"`
+	ID               uuid.UUID  `json:"id" db:"id"`
+	Name             string     `json:"name" db:"name"`
+	DisplayName      string     `json:"display_name" db:"display_name"`
+	Provider         string     `json:"provider" db:"provider"`
+	APIEndpoint      string     `json:"api_endpoint" db:"api_endpoint"`
+	APIKeyEncrypted  string     `json:"-" db:"api_key_encrypted"`
+	ModelIdentifier  string     `json:"model_identifier" db:"model_identifier"`
+	ProviderID       *uuid.UUID `json:"provider_id,omitempty" db:"provider_id"`
 
 	// Capabilities
 	SupportsStreaming  bool `json:"supports_streaming" db:"supports_streaming"`
@@ -90,12 +91,13 @@ type AIModel struct {
 
 // AIModelCreateRequest represents request to create an AI model
 type AIModelCreateRequest struct {
-	Name             string   `json:"name" binding:"required,min=1,max=100"`
-	DisplayName      string   `json:"display_name" binding:"required,min=1,max=100"`
-	Provider         string   `json:"provider" binding:"required"`
-	APIEndpoint      string   `json:"api_endpoint" binding:"required,url"`
-	APIKey           string   `json:"api_key" binding:"required"`
-	ModelIdentifier  string   `json:"model_identifier" binding:"required"`
+	Name             string     `json:"name" binding:"required,min=1,max=100"`
+	DisplayName      string     `json:"display_name" binding:"required,min=1,max=100"`
+	Provider         string     `json:"provider" binding:"required"`
+	APIEndpoint      string     `json:"api_endpoint"`
+	APIKey           string     `json:"api_key"`
+	ModelIdentifier  string     `json:"model_identifier" binding:"required"`
+	ProviderID       *uuid.UUID `json:"provider_id"`
 	SupportsStreaming bool    `json:"supports_streaming"`
 	SupportsFunctions bool    `json:"supports_functions"`
 	MaxTokens        int     `json:"max_tokens" binding:"required,min=1"`
@@ -107,7 +109,7 @@ type AIModelCreateRequest struct {
 // AIModelUpdateRequest represents request to update an AI model
 type AIModelUpdateRequest struct {
 	DisplayName      *string  `json:"display_name" binding:"omitempty,min=1,max=100"`
-	APIEndpoint      *string  `json:"api_endpoint" binding:"omitempty,url"`
+	APIEndpoint      *string  `json:"api_endpoint"`
 	APIKey           *string  `json:"api_key"`
 	SupportsStreaming *bool   `json:"supports_streaming"`
 	SupportsFunctions *bool   `json:"supports_functions"`

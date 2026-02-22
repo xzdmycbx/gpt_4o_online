@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import apiClient from '../../api/client';
+import { GlassCard } from '../../styles/glass';
 
 interface SystemSettingsDTO {
   rate_limit_default_per_minute: number;
@@ -56,11 +57,10 @@ const DEFAULT_EXPANDED_STATE: Record<SectionKey, boolean> = {
 
 const PRESET_MEMORY_MODELS = ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4o'];
 
-const Card = styled.div`
-  background: var(--bg-secondary);
-  border-radius: 12px;
+
+
+const Card = styled(GlassCard)`
   margin-bottom: 24px;
-  border: 1px solid var(--border-primary);
   overflow: hidden;
 `;
 
@@ -260,17 +260,26 @@ const SystemSettingsPage: React.FC = () => {
     smtpPassword: false,
     resendApiKey: false,
   });
+  const [availableModels, setAvailableModels] = useState<{ id: string; display_name: string; model_identifier: string; name: string }[]>([]);
+  const [customModelIdentifier, setCustomModelIdentifier] = useState('');
 
   const memoryModelOptions = useMemo(() => {
     const current = settings.ai_default_memory_model.trim();
-    if (current && !PRESET_MEMORY_MODELS.includes(current)) {
-      return [current, ...PRESET_MEMORY_MODELS];
+    // Build options from configured models + ensure current value is included
+    const modelIdentifiers = availableModels.map(m => m.model_identifier);
+    if (current && !modelIdentifiers.includes(current)) {
+      return [current, ...modelIdentifiers];
     }
-    return PRESET_MEMORY_MODELS;
-  }, [settings.ai_default_memory_model]);
+    return modelIdentifiers.length > 0 ? modelIdentifiers : PRESET_MEMORY_MODELS;
+  }, [settings.ai_default_memory_model, availableModels]);
 
   useEffect(() => {
     void loadSettings();
+    // Load available AI models for memory model selector
+    apiClient.get('/admin/models').then(res => {
+      const models = Array.isArray(res.data?.models) ? res.data.models : [];
+      setAvailableModels(models);
+    }).catch(() => {});
   }, []);
 
   const showMessage = (text: string, type: MessageType) => {
@@ -723,14 +732,32 @@ const SystemSettingsPage: React.FC = () => {
               <Label>Default Memory Model</Label>
               <Select
                 value={settings.ai_default_memory_model}
-                onChange={e => setSettings(prev => ({ ...prev, ai_default_memory_model: e.target.value }))}
+                onChange={e => {
+                  setSettings(prev => ({ ...prev, ai_default_memory_model: e.target.value }));
+                  setCustomModelIdentifier('');
+                }}
               >
-                {memoryModelOptions.map(model => (
-                  <option key={model} value={model}>
-                    {model}
+                {memoryModelOptions.map(m => (
+                  <option key={m} value={m}>
+                    {availableModels.find(am => am.model_identifier === m)?.display_name || m}
                   </option>
                 ))}
               </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label>Custom Model Identifier (override)</Label>
+              <Input
+                type="text"
+                value={customModelIdentifier}
+                placeholder="Leave blank to use selection above"
+                onChange={e => {
+                  setCustomModelIdentifier(e.target.value);
+                  if (e.target.value.trim()) {
+                    setSettings(prev => ({ ...prev, ai_default_memory_model: e.target.value.trim() }));
+                  }
+                }}
+              />
+              <HelpText>Enter a model identifier manually to override the dropdown selection.</HelpText>
             </FormGroup>
 
             <FormGroup>

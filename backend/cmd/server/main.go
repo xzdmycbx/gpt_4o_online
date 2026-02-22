@@ -138,6 +138,7 @@ func main() {
 	msgRepo := repository.NewMessageRepository(db.DB)
 	memoryRepo := repository.NewMemoryRepository(db.DB)
 	modelRepo := repository.NewAIModelRepository(db.DB)
+	providerRepo := repository.NewAIProviderRepository(db.DB)
 	settingsRepo := repository.NewUserSettingsRepository(db.DB)
 	auditRepo := repository.NewAuditLogRepository(db.DB)
 	tokenUsageRepo := repository.NewTokenUsageRepository(db.DB)
@@ -145,7 +146,7 @@ func main() {
 	resetTokenRepo := repository.NewPasswordResetTokenRepository(db.DB)
 
 	// Initialize services
-	aiProxyService := service.NewAIProxyService(modelRepo, cfg.Encryption.Key)
+	aiProxyService := service.NewAIProxyService(modelRepo, providerRepo, cfg.Encryption.Key)
 	memoryService := service.NewMemoryService(
 		memoryRepo,
 		msgRepo,
@@ -166,7 +167,7 @@ func main() {
 	emailService := service.NewEmailService(emailSender, userRepo, resetTokenRepo, cfg.Server.FrontendURL)
 	settingsService := service.NewUserSettingsService(settingsRepo)
 	systemSettingsService := service.NewSystemSettingsService(systemSettingsRepo, cfg.Encryption.Key)
-	adminService := service.NewAdminService(userRepo, modelRepo, auditRepo, tokenUsageRepo, convRepo, msgRepo, cfg.Encryption.Key)
+	adminService := service.NewAdminService(userRepo, modelRepo, providerRepo, auditRepo, tokenUsageRepo, convRepo, msgRepo, cfg.Encryption.Key)
 
 	// Load default rate limit from database (override env var if exists)
 	if defaultLimit, err := systemSettingsService.GetRateLimitDefault(ctx); err == nil && defaultLimit > 0 {
@@ -175,7 +176,7 @@ func main() {
 	}
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(authService, emailService, cfg.Server.FrontendURL)
+	authHandler := handlers.NewAuthHandler(authService, emailService, systemSettingsService, cfg.Server.FrontendURL)
 	chatHandler := handlers.NewChatHandler(chatService)
 	memoryHandler := handlers.NewMemoryHandler(memoryService)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
@@ -255,6 +256,7 @@ func setupRouter(cfg *config.Config, routerCfg *api.RouterConfig) *gin.Engine {
 		auth.POST("/register", authRateLimit, routerCfg.AuthHandler.Register)
 		auth.GET("/oauth2/twitter", routerCfg.AuthHandler.TwitterOAuth2)
 		auth.GET("/oauth2/callback", routerCfg.AuthHandler.OAuth2Callback)
+		auth.GET("/oauth2/providers", routerCfg.AuthHandler.GetEnabledOAuth2Providers)
 		auth.POST("/forgot-password", authRateLimit, routerCfg.AuthHandler.ForgotPassword)
 		auth.POST("/reset-password", authRateLimit, routerCfg.AuthHandler.ResetPassword)
 		auth.POST("/refresh", authRateLimit, routerCfg.AuthHandler.RefreshToken)
@@ -333,6 +335,14 @@ func setupRouter(cfg *config.Config, routerCfg *api.RouterConfig) *gin.Engine {
 				models.PUT("/:id", routerCfg.AdminHandler.UpdateModel)
 				models.DELETE("/:id", routerCfg.AdminHandler.DeleteModel)
 				models.PUT("/:id/default", routerCfg.AdminHandler.SetDefaultModel)
+			}
+
+			providers := admin.Group("/providers")
+			{
+				providers.GET("", routerCfg.AdminHandler.ListProviders)
+				providers.POST("", routerCfg.AdminHandler.CreateProvider)
+				providers.PUT("/:id", routerCfg.AdminHandler.UpdateProvider)
+				providers.DELETE("/:id", routerCfg.AdminHandler.DeleteProvider)
 			}
 
 			stats := admin.Group("/statistics")

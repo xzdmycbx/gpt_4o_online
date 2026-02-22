@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
@@ -163,6 +163,7 @@ const OAuth2Button = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease-in-out;
+  margin-bottom: 8px;
 
   &:hover {
     background-color: #2a3542;
@@ -188,14 +189,48 @@ const ForgotPassword = styled(Link)`
   }
 `;
 
+interface OAuthProvider {
+  name: string;
+  display_name: string;
+  auth_url: string;
+}
+
+const TwitterIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+);
+
+const GenericOAuthIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  </svg>
+);
+
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([]);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+    fetch(`${apiUrl}/auth/oauth2/providers`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data?.providers)) {
+          setOauthProviders(data.providers);
+        }
+      })
+      .catch(() => {
+        // silently ignore — OAuth block will stay hidden
+      });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,9 +247,10 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleTwitterLogin = () => {
+  const handleOAuthLogin = (authUrl: string) => {
     const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
-    window.location.href = `${apiUrl}/auth/oauth2/twitter`;
+    // authUrl is already an absolute path like /api/v1/auth/oauth2/twitter
+    window.location.href = authUrl.startsWith('/api') ? authUrl : `${apiUrl}${authUrl}`;
   };
 
   return (
@@ -225,14 +261,21 @@ const Login: React.FC = () => {
 
         {error && <Error>{error}</Error>}
 
-        <OAuth2Button type="button" onClick={handleTwitterLogin}>
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-          Continue with X (Twitter)
-        </OAuth2Button>
-
-        <Divider>OR</Divider>
+        {oauthProviders.length > 0 && (
+          <>
+            {oauthProviders.map(provider => (
+              <OAuth2Button
+                key={provider.name}
+                type="button"
+                onClick={() => handleOAuthLogin(provider.auth_url)}
+              >
+                {provider.name === 'twitter' ? <TwitterIcon /> : <GenericOAuthIcon />}
+                Continue with {provider.display_name}
+              </OAuth2Button>
+            ))}
+            <Divider>OR</Divider>
+          </>
+        )}
 
         <Form onSubmit={handleSubmit}>
           <InputGroup>
@@ -276,4 +319,3 @@ const Login: React.FC = () => {
 };
 
 export default Login;
-

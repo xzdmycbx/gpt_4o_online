@@ -432,12 +432,6 @@ const Memory: React.FC = () => {
           </svg>
         </BackBtn>
         <PageTitle>🧠 记忆管理</PageTitle>
-        <AddBtn onClick={openCreate}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          添加记忆
-        </AddBtn>
       </Header>
 
       <Content>
@@ -464,7 +458,7 @@ const Memory: React.FC = () => {
             <div style={{ fontSize: 15, marginBottom: 6 }}>
               {filter === 'all' ? '还没有记忆' : `没有「${CATEGORY_LABELS[filter]}」类型的记忆`}
             </div>
-            <div style={{ fontSize: 13 }}>AI 会在对话中自动提取记忆，也可手动添加</div>
+            <div style={{ fontSize: 13 }}>AI 会在对话中自动提取和保存记忆</div>
           </Empty>
         ) : (
           <CardGrid>
@@ -491,7 +485,7 @@ const Memory: React.FC = () => {
       {showModal && (
         <Backdrop onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
           <Modal>
-            <ModalTitle>{editTarget ? '编辑记忆' : '添加记忆'}</ModalTitle>
+            <ModalTitle>编辑记忆</ModalTitle>
 
             <FormGroup>
               <Label>内容</Label>

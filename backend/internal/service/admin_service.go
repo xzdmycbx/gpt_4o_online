@@ -15,6 +15,7 @@ import (
 type AdminService struct {
 	userRepo         *repository.UserRepository
 	modelRepo        *repository.AIModelRepository
+	providerRepo     *repository.AIProviderRepository
 	auditRepo        *repository.AuditLogRepository
 	tokenUsageRepo   *repository.TokenUsageRepository
 	conversationRepo *repository.ConversationRepository
@@ -27,6 +28,7 @@ type AdminService struct {
 func NewAdminService(
 	userRepo *repository.UserRepository,
 	modelRepo *repository.AIModelRepository,
+	providerRepo *repository.AIProviderRepository,
 	auditRepo *repository.AuditLogRepository,
 	tokenUsageRepo *repository.TokenUsageRepository,
 	conversationRepo *repository.ConversationRepository,
@@ -36,6 +38,7 @@ func NewAdminService(
 	return &AdminService{
 		userRepo:         userRepo,
 		modelRepo:        modelRepo,
+		providerRepo:     providerRepo,
 		auditRepo:        auditRepo,
 		tokenUsageRepo:   tokenUsageRepo,
 		conversationRepo: conversationRepo,
@@ -177,10 +180,28 @@ func (s *AdminService) ListAIModels(ctx context.Context, activeOnly bool) ([]*mo
 
 // CreateAIModel creates a new AI model
 func (s *AdminService) CreateAIModel(ctx context.Context, adminUserID uuid.UUID, req *model.AIModelCreateRequest) (*model.AIModel, error) {
-	// Encrypt API key
-	encryptedKey, err := crypto.Encrypt(req.APIKey, s.encryptionKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt API key: %w", err)
+	var encryptedKey string
+
+	// If no provider_id, API key is required
+	if req.ProviderID == nil {
+		if req.APIKey == "" {
+			return nil, fmt.Errorf("api_key is required when no provider is specified")
+		}
+		if req.APIEndpoint == "" {
+			return nil, fmt.Errorf("api_endpoint is required when no provider is specified")
+		}
+		var err error
+		encryptedKey, err = crypto.Encrypt(req.APIKey, s.encryptionKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt API key: %w", err)
+		}
+	} else if req.APIKey != "" {
+		// Optional: model-level key override
+		var err error
+		encryptedKey, err = crypto.Encrypt(req.APIKey, s.encryptionKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt API key: %w", err)
+		}
 	}
 
 	aiModel := &model.AIModel{
@@ -191,6 +212,7 @@ func (s *AdminService) CreateAIModel(ctx context.Context, adminUserID uuid.UUID,
 		APIEndpoint:       req.APIEndpoint,
 		APIKeyEncrypted:   encryptedKey,
 		ModelIdentifier:   req.ModelIdentifier,
+		ProviderID:        req.ProviderID,
 		SupportsStreaming: req.SupportsStreaming,
 		SupportsFunctions: req.SupportsFunctions,
 		MaxTokens:         req.MaxTokens,
@@ -267,6 +289,89 @@ func (s *AdminService) DeleteAIModel(ctx context.Context, modelID uuid.UUID) err
 // SetDefaultModel sets a model as default
 func (s *AdminService) SetDefaultModel(ctx context.Context, modelID uuid.UUID) error {
 	return s.modelRepo.SetDefault(ctx, modelID)
+}
+
+// ─── Provider CRUD ────────────────────────────────────────────────────────────
+
+// ListProviders lists all AI providers
+func (s *AdminService) ListProviders(ctx context.Context, activeOnly bool) ([]*model.AIProvider, error) {
+	return s.providerRepo.List(ctx, activeOnly)
+}
+
+// CreateProvider creates a new AI provider
+func (s *AdminService) CreateProvider(ctx context.Context, adminUserID uuid.UUID, req *model.AIProviderCreateRequest) (*model.AIProvider, error) {
+	encryptedKey, err := crypto.Encrypt(req.APIKey, s.encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt API key: %w", err)
+	}
+
+	provider := &model.AIProvider{
+		ID:              uuid.New(),
+		Name:            req.Name,
+		DisplayName:     req.DisplayName,
+		ProviderType:    req.ProviderType,
+		APIEndpoint:     req.APIEndpoint,
+		APIKeyEncrypted: encryptedKey,
+		IsActive:        true,
+		Description:     req.Description,
+		CreatedBy:       &adminUserID,
+	}
+
+	if err := s.providerRepo.Create(ctx, provider); err != nil {
+		return nil, fmt.Errorf("failed to create provider: %w", err)
+	}
+
+	return provider, nil
+}
+
+// UpdateProvider updates an AI provider
+func (s *AdminService) UpdateProvider(ctx context.Context, providerID uuid.UUID, req *model.AIProviderUpdateRequest) (*model.AIProvider, error) {
+	provider, err := s.providerRepo.GetByID(ctx, providerID)
+	if err != nil {
+		return nil, fmt.Errorf("provider not found")
+	}
+
+	if req.DisplayName != nil {
+		provider.DisplayName = *req.DisplayName
+	}
+	if req.ProviderType != nil {
+		provider.ProviderType = *req.ProviderType
+	}
+	if req.APIEndpoint != nil {
+		provider.APIEndpoint = *req.APIEndpoint
+	}
+	if req.APIKey != nil && *req.APIKey != "" {
+		encryptedKey, err := crypto.Encrypt(*req.APIKey, s.encryptionKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt API key: %w", err)
+		}
+		provider.APIKeyEncrypted = encryptedKey
+	}
+	if req.IsActive != nil {
+		provider.IsActive = *req.IsActive
+	}
+	if req.Description != nil {
+		provider.Description = *req.Description
+	}
+
+	if err := s.providerRepo.Update(ctx, provider); err != nil {
+		return nil, fmt.Errorf("failed to update provider: %w", err)
+	}
+
+	return provider, nil
+}
+
+// DeleteProvider deletes an AI provider (only if no models are linked)
+func (s *AdminService) DeleteProvider(ctx context.Context, providerID uuid.UUID) error {
+	count, err := s.providerRepo.CountModels(ctx, providerID)
+	if err != nil {
+		return fmt.Errorf("failed to check linked models: %w", err)
+	}
+	if count > 0 {
+		return fmt.Errorf("cannot delete provider: %d model(s) are linked to it", count)
+	}
+
+	return s.providerRepo.Delete(ctx, providerID)
 }
 
 // GetTokenLeaderboard retrieves the token usage leaderboard

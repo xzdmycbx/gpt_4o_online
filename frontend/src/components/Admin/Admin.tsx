@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import SystemOverview from './SystemOverview';
 import SystemSettings from './SystemSettings';
 import UserManagement from './UserManagement';
 import ModelManagement from './ModelManagement';
 import TokenLeaderboard from './TokenLeaderboard';
 import AuditLogs from './AuditLogs';
+import { GlassPanel } from '../../styles/glass';
 
 const Container = styled.div`
   display: flex;
@@ -14,10 +16,9 @@ const Container = styled.div`
   color: var(--text-primary);
 `;
 
-const Sidebar = styled.div<{ isOpen?: boolean }>`
+const Sidebar = styled(GlassPanel)<{ isOpen?: boolean }>`
   width: 260px;
-  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-elevated) 100%);
-  border-right: 1px solid var(--border-primary);
+  border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   padding: 24px 0;
@@ -47,6 +48,32 @@ const Nav = styled.nav`
   flex: 1;
   padding: 16px 0;
   overflow-y: auto;
+`;
+
+const SidebarFooter = styled.div`
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-primary);
+`;
+
+const BackButton = styled.button`
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    color: #667eea;
+  }
 `;
 
 const NavItem = styled.div<{ active?: boolean }>`
@@ -97,6 +124,7 @@ type TabType = 'overview' | 'settings' | 'users' | 'models' | 'tokens' | 'audit'
 const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   const tabs = [
     { id: 'overview' as TabType, label: '系统概览', icon: '📈' },
@@ -162,6 +190,14 @@ const Admin: React.FC = () => {
             </NavItem>
           ))}
         </Nav>
+        <SidebarFooter>
+          <BackButton onClick={() => navigate('/chat')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            返回前台
+          </BackButton>
+        </SidebarFooter>
       </Sidebar>
       <Content>
         <Header>
