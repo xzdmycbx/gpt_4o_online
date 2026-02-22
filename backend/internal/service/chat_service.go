@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -237,7 +238,9 @@ func (s *ChatService) SendMessage(ctx context.Context, userID, conversationID uu
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		_ = s.memoryService.ExtractMemoriesFromConversation(ctx, userID, conversationID)
+		if err := s.memoryService.ExtractMemoriesFromConversation(ctx, userID, conversationID); err != nil {
+			log.Printf("Memory extraction failed for conversation %s: %v", conversationID, err)
+		}
 	}()
 
 	return userMsg, assistantMsg, nil
@@ -323,4 +326,36 @@ func (s *ChatService) GetStreamingResponse(ctx context.Context, userID, conversa
 	// TODO: Implement actual streaming logic in Stage 4 with WebSocket handler
 
 	return responseChan, errorChan, nil
+}
+
+// AvailableModel is a user-safe view of an AI model (no API keys or internal URLs)
+type AvailableModel struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	DisplayName      string `json:"display_name"`
+	Description      string `json:"description,omitempty"`
+	IsDefault        bool   `json:"is_default"`
+	SupportsStreaming bool   `json:"supports_streaming"`
+	MaxTokens        int    `json:"max_tokens,omitempty"`
+}
+
+// ListAvailableModels returns active models with only user-safe fields
+func (s *ChatService) ListAvailableModels(ctx context.Context) ([]AvailableModel, error) {
+	models, err := s.modelRepo.List(ctx, true) // activeOnly=true
+	if err != nil {
+		return nil, err
+	}
+	result := make([]AvailableModel, 0, len(models))
+	for _, m := range models {
+		result = append(result, AvailableModel{
+			ID:               m.ID.String(),
+			Name:             m.Name,
+			DisplayName:      m.DisplayName,
+			Description:      m.Description,
+			IsDefault:        m.IsDefault,
+			SupportsStreaming: m.SupportsStreaming,
+			MaxTokens:        m.MaxTokens,
+		})
+	}
+	return result, nil
 }

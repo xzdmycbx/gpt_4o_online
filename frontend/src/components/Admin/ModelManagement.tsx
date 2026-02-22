@@ -144,6 +144,7 @@ const Select = styled.select`
 interface Model {
   id: string;
   name: string;
+  display_name: string;
   provider: string;
   api_endpoint: string;
   model_identifier: string;
@@ -155,6 +156,7 @@ const ModelManagement: React.FC = () => {
   const [models, setModels] = useState<Model[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingModel, setEditingModel] = useState<Model | null>(null);
+  const [saveError, setSaveError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     display_name: '',
@@ -181,6 +183,7 @@ const ModelManagement: React.FC = () => {
 
   const handleAdd = () => {
     setEditingModel(null);
+    setSaveError('');
     setFormData({
       name: '',
       display_name: '',
@@ -193,7 +196,23 @@ const ModelManagement: React.FC = () => {
     setShowModal(true);
   };
 
+  const handleEdit = (model: Model) => {
+    setEditingModel(model);
+    setSaveError('');
+    setFormData({
+      name: model.name,
+      display_name: model.display_name || '',
+      provider: model.provider,
+      api_endpoint: model.api_endpoint,
+      api_key: '', // API key never returned from server; user must re-enter to change
+      model_identifier: model.model_identifier,
+      max_tokens: model.max_tokens,
+    });
+    setShowModal(true);
+  };
+
   const handleSave = async () => {
+    setSaveError('');
     try {
       if (editingModel) {
         await apiClient.put(`/admin/models/${editingModel.id}`, formData);
@@ -202,8 +221,8 @@ const ModelManagement: React.FC = () => {
       }
       await loadModels();
       setShowModal(false);
-    } catch (error) {
-      console.error('Failed to save model:', error);
+    } catch (error: any) {
+      setSaveError(error?.response?.data?.error || '保存失败，请重试');
     }
   };
 
@@ -241,6 +260,7 @@ const ModelManagement: React.FC = () => {
           <Info><strong>API端点:</strong> {model.api_endpoint}</Info>
           <Info><strong>最大Tokens:</strong> {model.max_tokens}</Info>
           <ButtonGroup>
+            <Button onClick={() => handleEdit(model)}>编辑</Button>
             {!model.is_default && (
               <Button onClick={() => handleSetDefault(model.id)}>设为默认</Button>
             )}
@@ -250,9 +270,14 @@ const ModelManagement: React.FC = () => {
       ))}
 
       {showModal && (
-        <Modal onClick={() => setShowModal(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
+        <Modal onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+          <ModalContent>
             <ModalTitle>{editingModel ? '编辑模型' : '添加新模型'}</ModalTitle>
+            {saveError && (
+              <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(252,129,129,0.1)', border: '1px solid rgba(252,129,129,0.3)', color: '#fc8181', fontSize: 13 }}>
+                {saveError}
+              </div>
+            )}
             <FormGroup>
               <Label>模型名称</Label>
               <Input
@@ -310,7 +335,7 @@ const ModelManagement: React.FC = () => {
               <Input
                 type="number"
                 value={formData.max_tokens}
-                onChange={(e) => setFormData({ ...formData, max_tokens: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, max_tokens: parseInt(e.target.value) || 4096 })}
               />
             </FormGroup>
             <ButtonGroup>

@@ -268,6 +268,12 @@ func setupRouter(cfg *config.Config, routerCfg *api.RouterConfig) *gin.Engine {
 		protected.GET("/me", routerCfg.AuthHandler.GetCurrentUser)
 		protected.POST("/logout", routerCfg.AuthHandler.Logout)
 
+		// Available models for all authenticated users
+		protected.GET("/models", routerCfg.ChatHandler.GetAvailableModels)
+
+		// Token leaderboard — open to all authenticated users
+		protected.GET("/statistics/tokens", routerCfg.AdminHandler.TokenLeaderboard)
+
 		// Conversations
 		conversations := protected.Group("/conversations")
 		{

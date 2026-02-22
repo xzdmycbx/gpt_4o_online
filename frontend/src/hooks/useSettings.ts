@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient from '../api/client';
 
@@ -63,34 +63,53 @@ export const useSettings = () => {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  // Use a ref to track updatedAt so loadServerSettings doesn't re-create on every settings change
+  const updatedAtRef = useRef<string | undefined>(settings.updatedAt);
+
+  // Keep ref in sync with latest settings.updatedAt without causing re-renders
+  useEffect(() => {
+    updatedAtRef.current = settings.updatedAt;
+  }, [settings.updatedAt]);
+
+  // settingsRef lets syncSettings always read the latest settings without being in its deps
+  const settingsRef = useRef<UserSettings>(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   // Sync with server
   const syncSettings = useCallback(async (): Promise<void> => {
     if (!isAuthenticated) {
-      console.log('Not authenticated, skipping server sync');
       return;
     }
 
     setIsSyncing(true);
 
     try {
+      const now = new Date().toISOString();
+      const deviceId = getDeviceId();
       const localSettings = {
-        ...settings,
-        updatedAt: new Date().toISOString(),
-        deviceId: getDeviceId(),
+        ...settingsRef.current,
+        // Send both camelCase (local) and snake_case (Go JSON binding)
+        updatedAt: now,
+        updated_at: now,
+        deviceId,
+        device_id: deviceId,
       };
 
       const response = await apiClient.settings.sync(localSettings);
 
-      if (response.action === 'pulled') {
-        // Server had newer settings, update local state
+      if (response.action === 'pulled' && response.settings) {
+        const s = response.settings;
+        // Map snake_case backend fields to camelCase frontend schema
         setSettings((prev: UserSettings) => ({
           ...prev,
-          ...response.settings,
+          theme: s.theme ?? prev.theme,
+          fontSize: s.font_size ?? s.fontSize ?? prev.fontSize,
+          language: s.language ?? prev.language,
         }));
         console.log('Settings synced: pulled from server');
       } else {
-        // Local settings were pushed to server
         console.log('Settings synced: pushed to server');
       }
 
@@ -101,25 +120,28 @@ export const useSettings = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, [isAuthenticated, settings]);
+  }, [isAuthenticated]);
+  // NOTE: syncSettings no longer depends on `settings` — it reads via settingsRef
 
+  // loadServerSettings uses a ref for updatedAt so it doesn't change on every save
   const loadServerSettings = useCallback(async () => {
     try {
-      const response = await apiClient.settings.get();
-      const serverSettings = response.settings;
+      // GET /user/settings returns the settings object directly (not wrapped)
+      const serverSettings = await apiClient.settings.get();
 
       if (serverSettings) {
-        // Compare updatedAt to decide whether to pull from server
-        const localUpdatedAt = settings.updatedAt ? new Date(settings.updatedAt) : new Date(0);
-        const serverUpdatedAt = serverSettings.updatedAt
-          ? new Date(serverSettings.updatedAt)
-          : new Date(0);
+        const localUpdatedAt = updatedAtRef.current ? new Date(updatedAtRef.current) : new Date(0);
+        // Backend uses snake_case: updated_at
+        const serverTimestamp = serverSettings.updated_at || serverSettings.updatedAt;
+        const serverUpdatedAt = serverTimestamp ? new Date(serverTimestamp) : new Date(0);
 
         if (serverUpdatedAt > localUpdatedAt) {
-          // Server has newer settings, pull from server
+          // Map snake_case server fields back to camelCase frontend schema
           setSettings((prev: UserSettings) => ({
             ...prev,
-            ...serverSettings,
+            theme: serverSettings.theme ?? prev.theme,
+            fontSize: serverSettings.font_size ?? serverSettings.fontSize ?? prev.fontSize,
+            language: serverSettings.language ?? prev.language,
           }));
           console.log('Settings pulled from server');
         }
@@ -127,7 +149,7 @@ export const useSettings = () => {
     } catch (error) {
       console.error('Failed to load server settings:', error);
     }
-  }, [settings.updatedAt]);
+  }, []); // stable — reads updatedAt via ref, not as closure
 
   const updateSettings = useCallback((updates: Partial<UserSettings>) => {
     setSettings((prev: UserSettings) => ({
@@ -141,7 +163,7 @@ export const useSettings = () => {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  // Save to localStorage whenever settings change
+  // Save to localStorage whenever settings change, then debounce-sync to server
   useEffect(() => {
     const settingsToSave = {
       ...settings,
@@ -150,7 +172,6 @@ export const useSettings = () => {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settingsToSave));
 
-    // Auto-sync to server after 500ms debounce (if authenticated)
     if (isAuthenticated) {
       const timer = setTimeout(() => {
         syncSettings().catch((error: unknown) => {
@@ -162,7 +183,9 @@ export const useSettings = () => {
     }
   }, [settings, isAuthenticated, syncSettings]);
 
-  // Load settings from server on mount (if authenticated)
+  // Load settings from server ONCE on mount (when authenticated)
+  // loadServerSettings is now stable (no changing deps), so this only runs
+  // when isAuthenticated changes, not on every settings change.
   useEffect(() => {
     if (isAuthenticated) {
       loadServerSettings().catch((error: unknown) => {

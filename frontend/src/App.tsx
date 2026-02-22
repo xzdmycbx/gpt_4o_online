@@ -9,6 +9,8 @@ import ResetPassword from './components/Auth/ResetPassword';
 import Chat from './components/Chat/Chat';
 import Admin from './components/Admin/Admin';
 import Settings from './components/Settings/Settings';
+import Memory from './components/Memory/Memory';
+import Leaderboard from './components/Leaderboard/Leaderboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
@@ -59,6 +61,8 @@ const App: React.FC = () => {
         <Route path="/chat" element={<Chat />} />
         <Route path="/chat/:conversationId" element={<Chat />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/memory" element={<Memory />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Route>
 
       {/* Admin routes - require admin or super_admin role */}

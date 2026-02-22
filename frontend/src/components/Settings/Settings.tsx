@@ -234,6 +234,8 @@ const Settings: React.FC = () => {
       <Subtitle>Manage your account settings and preferences</Subtitle>
       <ActionRow>
         <Button type="button" onClick={() => navigate('/chat')}>返回对话</Button>
+        <Button type="button" onClick={() => navigate('/memory')}>记忆管理</Button>
+        <Button type="button" onClick={() => navigate('/leaderboard')}>排行榜</Button>
         {canAccessAdmin && (
           <Button type="button" onClick={() => navigate('/admin')}>管理后台</Button>
         )}

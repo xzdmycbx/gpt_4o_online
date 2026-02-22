@@ -132,6 +132,7 @@ func (s *MemoryService) extractMemoriesWithAI(ctx context.Context, conversationT
 
 	// Get memory extraction model
 	var modelID uuid.UUID
+	var modelIdentifier string
 	models, err := s.modelRepo.List(ctx, true)
 	if err != nil || len(models) == 0 {
 		return nil, fmt.Errorf("no active models available")
@@ -141,16 +142,18 @@ func (s *MemoryService) extractMemoriesWithAI(ctx context.Context, conversationT
 	for _, m := range models {
 		if m.ModelIdentifier == s.defaultModel || m.Name == s.defaultModel {
 			modelID = m.ID
+			modelIdentifier = m.ModelIdentifier
 			break
 		}
 	}
 	if modelID == uuid.Nil {
 		modelID = models[0].ID // Use first available model
+		modelIdentifier = models[0].ModelIdentifier
 	}
 
-	// Prepare chat request
+	// Prepare chat request — use the model's actual ModelIdentifier, not the config string
 	request := &model.ChatCompletionRequest{
-		Model: s.defaultModel,
+		Model: modelIdentifier,
 		Messages: []model.ChatMessage{
 			{
 				Role:    "system",

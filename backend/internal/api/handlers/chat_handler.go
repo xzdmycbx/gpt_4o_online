@@ -389,3 +389,13 @@ func (h *ChatHandler) StreamSSE(c *gin.Context) {
 		}
 	}
 }
+
+// GetAvailableModels returns the list of active AI models for regular users
+func (h *ChatHandler) GetAvailableModels(c *gin.Context) {
+	models, err := h.chatService.ListAvailableModels(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load models"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"models": models})
+}

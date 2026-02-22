@@ -265,9 +265,16 @@ class APIClient {
     },
   };
 
+  // Available models for authenticated users
+  models = {
+    list: async () => {
+      const response = await this.client.get('/models');
+      return response.data;
+    },
+  };
+
   // Memory endpoints
-  memories = {
-    list: async (limit = 50, offset = 0) => {
+  memories = {    list: async (limit = 50, offset = 0) => {
       const response = await this.client.get('/memories', { params: { limit, offset } });
       return response.data;
     },
