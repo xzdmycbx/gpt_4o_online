@@ -432,6 +432,7 @@ const Memory: React.FC = () => {
           </svg>
         </BackBtn>
         <PageTitle>🧠 记忆管理</PageTitle>
+        <AddBtn onClick={openCreate}>+ Add</AddBtn>
       </Header>
 
       <Content>
